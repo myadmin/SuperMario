@@ -1,0 +1,38 @@
+# CI：validate（关卡/素材静态校验）→ typecheck → build → smoke（无头浏览器回归）。
+#
+# smoke 依赖系统 Chrome：GitHub 的 ubuntu-latest 镜像自带 Google Chrome（/usr/bin/google-chrome），
+# tools/smoke.mjs 会自动探测；换镜像时用 CHROME_PATH 环境变量显式指定。
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate levels & assets
+        run: npm run validate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Smoke test (headless Chrome)
+        run: npm run smoke
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
