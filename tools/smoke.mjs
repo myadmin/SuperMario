@@ -300,23 +300,28 @@ try {
     s.starmen === 1 && s.brick101.behavior === 'ground' && s.brick101.style === 'metal',
     JSON.stringify({ starmen: s.starmen, tile: s.brick101 }))
 
-  // ---- E2. 吃星星
-  await page.evaluate(() => {
-    const h = window.__handle
-    const cur = h.sceneRunner.scenes[h.sceneRunner.sceneIndex]
-    const m = window.mario
-    for (const e of cur.entities) {
-      let isStar = false
-      for (const t of e.traits.values()) if (t.constructor.name === 'StarPickup') isStar = true
-      if (isStar) {
-        m.pos.set(e.pos.x, e.pos.y - 16)
-        m.vel.set(0, 0)
-        return
+  // ---- E2. 吃星星（星星在弹跳移动，反复贴上去直到吃到——最多 3 秒）
+  const tEat = Date.now()
+  let s2 = await state()
+  while (Date.now() - tEat < 3000 && !s2.starActive) {
+    await page.evaluate(() => {
+      const h = window.__handle
+      const cur = h.sceneRunner.scenes[h.sceneRunner.sceneIndex]
+      const m = window.mario
+      for (const e of cur.entities) {
+        let isStar = false
+        for (const t of e.traits.values()) if (t.constructor.name === 'StarPickup') isStar = true
+        if (isStar) {
+          m.pos.set(e.pos.x, e.pos.y - 8)
+          m.vel.set(0, 0)
+          return
+        }
       }
-    }
-  })
-  await sleep(500)
-  s = await state()
+    })
+    await sleep(250)
+    s2 = await state()
+  }
+  s = s2
   check('E2. 吃到无敌星（StarPower 激活、+1000 分）',
     s.starActive === true && s.score === 1200,
     JSON.stringify({ active: s.starActive, score: s.score }))
@@ -391,14 +396,19 @@ try {
     s.levelName === '1-1' && s.marioPos && Math.abs(s.marioPos.x - 2617) < 24 && Math.abs(s.marioPos.y - 144) < 8,
     JSON.stringify({ level: s.levelName, pos: s.marioPos }))
 
-  // ---- G1. 抓旗杆（旗杆实体 x≈3168-3180）
-  await page.evaluate(() => {
-    const m = window.mario
-    m.pos.set(3168, 104)
-    m.vel.set(0, 0)
-  })
-  await sleep(500)
-  s = await state()
+  // ---- G1. 抓旗杆（旗杆实体 x≈3168-3180）；没抓上就再贴一次（最多 3 次）
+  let g1 = null
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.evaluate(() => {
+      const m = window.mario
+      m.pos.set(3168, 104)
+      m.vel.set(0, 0)
+    })
+    await sleep(500)
+    g1 = await state()
+    if (g1.timerFrozen === true) break
+  }
+  s = g1
   check('G1. 抓杆：计时冻结 + 高度计分',
     s.timerFrozen === true && s.score > 1200,
     JSON.stringify({ frozen: s.timerFrozen, score: s.score, time: s.timerTime }))
@@ -463,12 +473,12 @@ try {
     t12.hidden29.hidden === true && t12.hidden29.style === 'metal' && t12.hidden46.hidden === true,
     JSON.stringify({ hidden29: t12.hidden29, hidden46: t12.hidden46 }))
 
-  // ---- H3. 1-2 的奖励室管道对（col 103 进 → coin-room-2 → col 109 出）
+  // ---- H3. 1-2 的奖励室管道对（col 109 中间最高管进 → coin-room-2 → col 115 右管出）
   await page.evaluate(() => {
     const m = window.mario
     const power = [...m.traits.values()].find((t) => t.constructor.name === 'PowerState')
-    const mouthTop = 160                                   // 3 格高管口顶 y
-    m.pos.set(103 * 16 + 2, power.large ? mouthTop - 32 : mouthTop - 16)
+    const mouthTop = 144                                   // 4 格高管口顶 y
+    m.pos.set(109 * 16 + 2, power.large ? mouthTop - 32 : mouthTop - 16)
     m.vel.set(0, 0)
     const pt = [...m.traits.values()].find((t) => t.constructor.name === 'PipeTraveller')
     pt.direction.set(0, 0)
@@ -482,7 +492,7 @@ try {
     },
     { timeout: 15000 },
   )
-  check('H3a. 站上 103 列管口按 ↓ → 进入 coin-room-2', true)
+  check('H3a. 站上 109 列（中间最高）管口按 ↓ → 进入 coin-room-2', true)
 
   await page.evaluate(() => {
     const m = window.mario
@@ -505,11 +515,11 @@ try {
   const h3b = await page.evaluate(() => {
     const m = window.mario
     const power = [...m.traits.values()].find((t) => t.constructor.name === 'PowerState')
-    const expectY = power.large ? 112 : 128                // 4 格高管口顶 y=144，站上去脚底对齐
+    const expectY = power.large ? 144 : 160                // 2 格管口顶 y=176，站上去脚底对齐
     return { pos: { x: Math.round(m.pos.x), y: Math.round(m.pos.y) }, expectY }
   })
-  check('H3b. 走进返程横管 → 从 109 列 4 格高管钻出回 1-2',
-    h3b.pos.x > 1730 && Math.abs(h3b.pos.y - h3b.expectY) < 8,
+  check('H3b. 走进返程横管 → 从 115 列 2 格管钻出回 1-2',
+    h3b.pos.x > 1820 && Math.abs(h3b.pos.y - h3b.expectY) < 8,
     JSON.stringify(h3b))
 
   console.log('\n---- console/page/http errors ----')

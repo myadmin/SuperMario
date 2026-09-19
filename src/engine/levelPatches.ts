@@ -269,20 +269,21 @@ const LEVEL_PATCHES: Record<string, LevelPatch> = {
       { x: 73, y: 8, content: 'coin' },
       { x: 150, y: 8, content: 'coin' },
     ],
-    // 原版 1-2 的奖励室管道对：第 103 列的 3 格高管**可进**（站上按 ↓，进 coin-room-2），
-    // 从奖励室返程后**从第 109 列的 4 格高管里钻出来**——「进左管、出右管」正是原版
-    // 1-2 这对管子的设计。接法与 1-1 的奖励室一致（入口挂 goesTo + backTo，出口只挂 id）；
-    // coin-room-2 的返程 portal 注入见下方 'coin-room-2'。
+    // 原版 1-2 的奖励室管道对（三连管 col 103 / 109 / 115，高 3 / 4 / 2）：
+    // **中间最高的 4 格管可进**（站上按 ↓，进 coin-room-2）——用户实测指认
+    // （站上中间管按 ↓ 无反应）；返程后**从右边最矮的 2 格管里钻出来**继续往右走。
+    // 接法与 1-1 的奖励室一致（入口挂 goesTo + backTo，出口只挂 id）；
+    // coin-room-2 的返程 portal 注入见下方 'coin-room-2'。左侧的 3 格管是装饰，不接。
     bonusPipes: [
       {
-        mouth: { x: 103, y: 10 },
+        mouth: { x: 109, y: 9 },
         dir: 'DOWN',
         goesTo: 'coin-room-2',
         backTo: '1-2-bonus-exit',
         portal: { offsetX: 0, offsetY: -16, width: 32, height: 32 },
       },
       {
-        mouth: { x: 109, y: 9 },
+        mouth: { x: 115, y: 11 },
         dir: 'UP',
         id: '1-2-bonus-exit',
         portal: { offsetX: 0, offsetY: 0, width: 32, height: 32 },
