@@ -261,6 +261,23 @@ try {
     hidden64 !== null && hidden64.hidden === true && hidden64.style === 'metal',
     JSON.stringify(hidden64))
 
+  // ---- P0. ESC 暂停 / 继续：暂停期间模拟冻结（TIME 停走、位置不动），再按继续
+  await page.keyboard.press('Escape')
+  await sleep(400)
+  const pz1 = await state()
+  await sleep(800)
+  const pz2 = await state()
+  await page.keyboard.press('Escape')
+  await sleep(400)
+  const rz = await state()
+  const frozenOk =
+    pz1.timerTime === pz2.timerTime &&
+    pz1.marioPos.x === pz2.marioPos.x && pz1.marioPos.y === pz2.marioPos.y &&
+    rz.timerTime < pz1.timerTime
+  check('P0. ESC 暂停：TIME 停走 + 位置冻结；再按继续倒计时',
+    frozenOk,
+    JSON.stringify({ t1: pz1.timerTime, t2: pz2.timerTime, pos1: pz1.pos, pos2: pz2.pos, t3: rz.timerTime }))
+
   // ---- B1. 顶金币问号块（col 106；col 16/78 是道具块）
   await bump(106 * 16 + 1, 163)
   await sleep(400)

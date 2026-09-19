@@ -1,6 +1,8 @@
 import Phaser from 'phaser'
 import { createGame, type GameHandle } from '../game'
 import { hideBoot } from '../boot'
+import { assetUrl } from '../engine/paths'
+import type Level from '../engine/Level'
 import type { KeyboardListener } from '../engine/input'
 
 /** Upstream's Timer used a fixed 1/60 step; we drive it from Phaser's tick. */
@@ -23,6 +25,16 @@ export class GameScene extends Phaser.Scene {
   private handle: GameHandle | null = null
   private accumulator = 0
   private started = false
+
+  /**
+   * 本项目新增：ESC 暂停。原版 SMB 的 START 键暂停：画面冻结、音乐静音（继续后原地
+   * 续播）并响暂停音。这里的实现：暂停时不再推进模拟（accumulator 清零，恢复时
+   * 不会快进），画布压暗并写上 PAUSE 字样；背景音乐的静音 / 续播走 MusicPlayer 的
+   * mute / resume（与音乐开关同一套，不丢「当前曲目」），且只在暂停那一刻音乐
+   * 确实在响时才续播——不破坏「抓杆后音乐应保持静默」的原版行为。
+   */
+  private paused = false
+  private pausedMusicWasPlaying = false
 
   constructor() {
     super('Game')
@@ -96,11 +108,61 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.input.on(Phaser.Input.Events.POINTER_DOWN, start)
+
+    // 本项目新增：ESC 暂停 / 继续（宿主层职责——与实体输入的 KEYMAP 无关）
+    this.input.keyboard?.on('keydown-ESC', (event: KeyboardEvent) => {
+      if (event.repeat || !this.handle) {
+        return
+      }
+      this.togglePause()
+    })
+  }
+
+  private togglePause() {
+    this.paused = !this.paused
+
+    // 暂停音（原版 pause.ogg，此前从未被使用）。音效不接音乐开关（与踢壳 / 1UP 同类）。
+    const sfx = new Audio(assetUrl('/audio/fx/pause.ogg'))
+    void sfx.play().catch(() => undefined)
+
+    // 当前场景是关卡时才动背景音乐；过渡页 / 加载页没有音乐
+    const scene = this.handle ? this.handle.sceneRunner.scenes[this.handle.sceneRunner.sceneIndex] : null
+    const musicPlayer = (scene as Level | null)?.music?.player ?? null
+
+    if (this.paused) {
+      this.pausedMusicWasPlaying =
+        !!musicPlayer?.current && !musicPlayer.tracks.get(musicPlayer.current)!.paused
+      musicPlayer?.mute()
+      this.drawPauseOverlay()
+    } else {
+      if (this.pausedMusicWasPlaying) {
+        musicPlayer?.resume()
+      }
+      // 继续的第一帧由正常模拟重绘整屏，PAUSE 字样自然消失
+    }
+  }
+
+  /** 暂停指示：整屏压暗 + 位图字体居中写 PAUSE（画在 256x240 纹理上，1:1 呈现）。 */
+  private drawPauseOverlay() {
+    const ctx = this.screenTexture.context
+    ctx.save()
+    ctx.globalAlpha = 0.55
+    ctx.fillStyle = '#000'
+    ctx.fillRect(0, 0, 256, 240)
+    ctx.restore()
+    this.handle?.font.print('PAUSE', ctx, 108, 112)
+    this.screenTexture.refresh()
   }
 
   update(_time: number, delta: number) {
     const handle = this.handle
     if (!handle) {
+      return
+    }
+
+    if (this.paused) {
+      // 冻结模拟并把累计时间清零：恢复时不会把暂停期间的时长快进补回来
+      this.accumulator = 0
       return
     }
 
