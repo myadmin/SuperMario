@@ -77,7 +77,11 @@ try {
   const errors = []
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message))
   page.on('console', (m) => {
-    if (m.type() === 'error' && !m.text().includes('favicon')) errors.push('console.error: ' + m.text())
+    // 网络类错误（"Failed to load resource: ..."）不带 URL，由下面的 response
+    // 处理器按 URL 判定（favicon 已豁免），这里不重复计错。
+    if (m.type() === 'error' && !m.text().startsWith('Failed to load resource')) {
+      errors.push('console.error: ' + m.text())
+    }
   })
   page.on('response', (r) => {
     if (r.status() >= 400 && !r.url().includes('favicon')) errors.push(`http ${r.status()}: ${r.url()}`)
