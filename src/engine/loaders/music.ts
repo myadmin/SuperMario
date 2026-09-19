@@ -1,6 +1,7 @@
 /**
  * loaders/music.ts — ported verbatim from upstream `public/js/loaders/music.js`.
  */
+import { assetUrl } from '../paths'
 import { loadJSON } from './loaders'
 import MusicPlayer from '../MusicPlayer'
 
@@ -10,7 +11,7 @@ export function loadMusicSheet(name: string): Promise<MusicPlayer> {
   return loadJSON<MusicSheet>(`/music/${name}.json`).then((musicSheet) => {
     const musicPlayer = new MusicPlayer()
     for (const [trackName, track] of Object.entries(musicSheet)) {
-      musicPlayer.addTrack(trackName, track.url)
+      musicPlayer.addTrack(trackName, assetUrl(track.url))
     }
     return musicPlayer
   })

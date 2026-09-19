@@ -20,8 +20,11 @@ import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import puppeteer from 'puppeteer-core'
 
+// 默认自己起 dev server（base '/'）；设置 SMOKE_BASE_URL 时改为对既有站点实测
+// （CI 的部署流程用它对「按 Pages 子路径构建出来的产物」做回归，如
+// http://localhost:4173/SuperMario/）。
 const PORT = 5199
-const BASE_URL = `http://localhost:${PORT}/`
+const BASE_URL = process.env.SMOKE_BASE_URL || `http://localhost:${PORT}/`
 
 function resolveChrome() {
   const candidates = [
@@ -55,13 +58,16 @@ async function waitForServer(url, timeoutMs = 30000) {
   throw new Error(`dev server 在 ${timeoutMs}ms 内没有就绪: ${url}`)
 }
 
-// ---------------------------------------------------------------- 启动 dev server
-const vite = spawn(
-  process.execPath,
-  [new URL('../node_modules/vite/bin/vite.js', import.meta.url).pathname, '--port', String(PORT), '--strictPort'],
-  { stdio: 'ignore' },
-)
-process.on('exit', () => vite.kill())
+// ---------------------------------------------------------------- 启动 dev server（外部 URL 时跳过）
+let vite = null
+if (!process.env.SMOKE_BASE_URL) {
+  vite = spawn(
+    process.execPath,
+    [new URL('../node_modules/vite/bin/vite.js', import.meta.url).pathname, '--port', String(PORT), '--strictPort'],
+    { stdio: 'ignore' },
+  )
+  process.on('exit', () => vite.kill())
+}
 
 try {
   await waitForServer(BASE_URL)
@@ -115,14 +121,14 @@ try {
     let goomba = null
     for (const e of cur.entities) {
       for (const t of e.traits.values()) {
-        if (t.constructor.name === 'Behavior') { goomba = e; break }
+        if (t.constructor.name.replace(/^_/, '') === 'Behavior') { goomba = e; break }
       }
       if (goomba) break
     }
     if (!goomba) {
       for (const e of cur.entities) {
         for (const t of e.traits.values()) {
-          if (t.constructor.name === 'Spawner' && t.entities.length > 0) {
+          if (t.constructor.name.replace(/^_/, '') === 'Spawner' && t.entities.length > 0) {
             goomba = t.entities.shift()
             break
           }
@@ -144,9 +150,9 @@ try {
     const h = window.__handle
     const cur = h.sceneRunner.scenes[h.sceneRunner.sceneIndex]
     for (const e of cur.entities) {
-      const names = [...e.traits.values()].map((t) => t.constructor.name)
+      const names = [...e.traits.values()].map((t) => t.constructor.name.replace(/^_/, ''))
       if (names.includes('Flipped')) {
-        const k = [...e.traits.values()].find((t) => t.constructor.name === 'Killable')
+        const k = [...e.traits.values()].find((t) => t.constructor.name.replace(/^_/, '') === 'Killable')
         return { flipped: true, killed: k ? k.killed : null }
       }
     }
@@ -162,12 +168,12 @@ try {
     const cur = h.sceneRunner.scenes[h.sceneRunner.sceneIndex]
     for (const e of [...cur.entities]) {
       for (const t of e.traits.values()) {
-        if (t.constructor.name === 'Behavior') { cur.entities.delete(e); break }
+        if (t.constructor.name.replace(/^_/, '') === 'Behavior') { cur.entities.delete(e); break }
       }
     }
     for (const e of cur.entities) {
       for (const t of e.traits.values()) {
-        if (t.constructor.name === 'Spawner') t.entities.length = 0
+        if (t.constructor.name.replace(/^_/, '') === 'Spawner') t.entities.length = 0
       }
     }
   })
@@ -190,14 +196,14 @@ try {
       }
       const findTrait = (name) => {
         if (!m) return null
-        for (const t of m.traits.values()) if (t.constructor.name === name) return t
+        for (const t of m.traits.values()) if (t.constructor.name.replace(/^_/, '') === name) return t
         return null
       }
       const countTrait = (name) => {
         if (!level) return 0
         let n = 0
         for (const e of level.entities) {
-          for (const t of e.traits.values()) if (t.constructor.name === name) n++
+          for (const t of e.traits.values()) if (t.constructor.name.replace(/^_/, '') === name) n++
         }
         return n
       }
@@ -283,7 +289,7 @@ try {
   await page.evaluate(() => {
     const m = window.mario
     for (const t of m.traits.values()) {
-      if (t.constructor.name === 'PowerState') {
+      if (t.constructor.name.replace(/^_/, '') === 'PowerState') {
         t.level = 'super'
         t.resize(m, 32)
       }
@@ -305,6 +311,7 @@ try {
     JSON.stringify({ starmen: s.starmen, tile: s.brick101 }))
 
   // ---- E2. 吃星星（星星在弹跳移动，反复贴上去直到吃到——最多 3 秒）
+  const scoreBeforeStar = (await state()).score
   const tEat = Date.now()
   let s2 = await state()
   while (Date.now() - tEat < 3000 && !s2.starActive) {
@@ -314,7 +321,7 @@ try {
       const m = window.mario
       for (const e of cur.entities) {
         let isStar = false
-        for (const t of e.traits.values()) if (t.constructor.name === 'StarPickup') isStar = true
+        for (const t of e.traits.values()) if (t.constructor.name.replace(/^_/, '') === 'StarPickup') isStar = true
         if (isStar) {
           m.pos.set(e.pos.x, e.pos.y - 8)
           m.vel.set(0, 0)
@@ -327,8 +334,8 @@ try {
   }
   s = s2
   check('E2. 吃到无敌星（StarPower 激活、+1000 分）',
-    s.starActive === true && s.score === 1200,
-    JSON.stringify({ active: s.starActive, score: s.score }))
+    s.starActive === true && s.score === scoreBeforeStar + 1000,
+    JSON.stringify({ active: s.starActive, score: s.score, before: scoreBeforeStar }))
 
   // ---- H. 隐藏金币奖励室（1-1 ↔ coin-room-1）
   // H1: 两个门户已注入（入口 DOWN 带 goesTo+backTo，出口 UP 带 id）
@@ -356,7 +363,7 @@ try {
     // 大马里奥站在管口上：脚底 y=144 → pos.y=112；x 落在门户 [912,944] 内
     m.pos.set(920, 112)
     m.vel.set(0, 0)
-    const pt = [...m.traits.values()].find((t) => t.constructor.name === 'PipeTraveller')
+    const pt = [...m.traits.values()].find((t) => t.constructor.name.replace(/^_/, '') === 'PipeTraveller')
     pt.direction.y = 1
   })
   await page.waitForFunction(
@@ -376,7 +383,7 @@ try {
     // 奖励室返程门户在 x [206,230]：马里奥横向整个落在门户内，纵向站在地面 y 208
     m.pos.set(208, 176)
     m.vel.set(0, 0)
-    const pt = [...m.traits.values()].find((t) => t.constructor.name === 'PipeTraveller')
+    const pt = [...m.traits.values()].find((t) => t.constructor.name.replace(/^_/, '') === 'PipeTraveller')
     pt.direction.set(0, 0)
     pt.direction.x = 1
   })
@@ -393,7 +400,7 @@ try {
   s = await state()
   await page.evaluate(() => {
     const m = window.mario
-    const pt = [...m.traits.values()].find((t) => t.constructor.name === 'PipeTraveller')
+    const pt = [...m.traits.values()].find((t) => t.constructor.name.replace(/^_/, '') === 'PipeTraveller')
     pt.direction.set(0, 0)
   })
   check('H2b. 走进返程横管 → 从 163 列管口钻出回 1-1',
@@ -420,7 +427,7 @@ try {
   // 滑杆到底（序列启动）那一刻取样的——此刻设置正好被采样。
   await page.evaluate(() => {
     const m = window.mario
-    const timer = [...m.traits.values()].find((t) => t.constructor.name === 'LevelTimer')
+    const timer = [...m.traits.values()].find((t) => t.constructor.name.replace(/^_/, '') === 'LevelTimer')
     timer.currentTime = 361
   })
 
@@ -480,11 +487,11 @@ try {
   // ---- H3. 1-2 的奖励室管道对（col 109 中间最高管进 → coin-room-2 → col 115 右管出）
   await page.evaluate(() => {
     const m = window.mario
-    const power = [...m.traits.values()].find((t) => t.constructor.name === 'PowerState')
+    const power = [...m.traits.values()].find((t) => t.constructor.name.replace(/^_/, '') === 'PowerState')
     const mouthTop = 144                                   // 4 格高管口顶 y
     m.pos.set(109 * 16 + 2, power.large ? mouthTop - 32 : mouthTop - 16)
     m.vel.set(0, 0)
-    const pt = [...m.traits.values()].find((t) => t.constructor.name === 'PipeTraveller')
+    const pt = [...m.traits.values()].find((t) => t.constructor.name.replace(/^_/, '') === 'PipeTraveller')
     pt.direction.set(0, 0)
     pt.direction.y = 1
   })
@@ -500,10 +507,10 @@ try {
 
   await page.evaluate(() => {
     const m = window.mario
-    const power = [...m.traits.values()].find((t) => t.constructor.name === 'PowerState')
+    const power = [...m.traits.values()].find((t) => t.constructor.name.replace(/^_/, '') === 'PowerState')
     m.pos.set(202, power.large ? 176 : 192)                // 返程管口（x 200~224）前的地面
     m.vel.set(0, 0)
-    const pt = [...m.traits.values()].find((t) => t.constructor.name === 'PipeTraveller')
+    const pt = [...m.traits.values()].find((t) => t.constructor.name.replace(/^_/, '') === 'PipeTraveller')
     pt.direction.set(0, 0)
     pt.direction.x = 1
   })
@@ -518,7 +525,7 @@ try {
   await sleep(1800)                                        // 等钻管动画结束
   const h3b = await page.evaluate(() => {
     const m = window.mario
-    const power = [...m.traits.values()].find((t) => t.constructor.name === 'PowerState')
+    const power = [...m.traits.values()].find((t) => t.constructor.name.replace(/^_/, '') === 'PowerState')
     const expectY = power.large ? 144 : 160                // 2 格管口顶 y=176，站上去脚底对齐
     return { pos: { x: Math.round(m.pos.x), y: Math.round(m.pos.y) }, expectY }
   })
@@ -534,5 +541,5 @@ try {
   console.log(`\n${results.length - failed.length}/${results.length} checks passed`)
   process.exit(failed.length || errors.length ? 1 : 0)
 } finally {
-  vite.kill()
+  vite?.kill()
 }

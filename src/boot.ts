@@ -85,6 +85,8 @@ const MANIFEST: string[] = [
   '/audio/fx/vine.ogg',
 ]
 
+import { assetUrl } from './engine/paths'
+
 let loaded = 0
 
 function tick() {
@@ -102,7 +104,7 @@ export function hideBoot() {
 
 // 模块即执行：main.ts 把它放在 Phaser 之前导入，尽早开跑。
 for (const url of MANIFEST) {
-  fetch(url)
+  fetch(assetUrl(url))
     .catch(() => undefined)
     .finally(() => {
       loaded += 1

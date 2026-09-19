@@ -18,6 +18,7 @@
  *      就已由第 1 种用法的 `registerExtraFx()` 解码好，所以这里是**同步**的。
  */
 import AudioBoard from './AudioBoard'
+import { assetUrl } from './paths'
 import { createAudioLoader } from './loaders/audio'
 
 /** 加命音效（`public/audio/fx/1up.ogg`）：吃 1-UP 蘑菇、攒满 100 枚金币。 */
@@ -77,7 +78,7 @@ function decode(name: string, audioContext: AudioContext): Promise<AudioBuffer> 
 
   let request = loading.get(name)
   if (!request) {
-    request = createAudioLoader(audioContext)(EXTRA_FX[name]).then(
+    request = createAudioLoader(audioContext)(assetUrl(EXTRA_FX[name])).then(
       (buffer) => {
         buffers.set(name, buffer)
         loading.delete(name)

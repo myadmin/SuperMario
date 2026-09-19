@@ -27,7 +27,7 @@ export class Font {
 }
 
 export function loadFont(): Promise<Font> {
-  return loadImage('./img/font.png').then((image) => {
+  return loadImage('/img/font.png').then((image) => {
     const fontSprite = new SpriteSheet(image)
 
     const size = 8

@@ -1,0 +1,72 @@
+# 部署到 GitHub Pages：推送 main 即发布，之后通过
+# https://<owner>.github.io/SuperMario/ 在线访问。
+#
+# 需要一次性在仓库 Settings → Pages 里把 Source 设为「GitHub Actions」。
+# 构建时的 DEPLOY_BASE=/SuperMario/ 会让 vite 把 bundle 挂到子路径，运行时的
+# 资源路径（/img/... 等根绝对路径）由 src/engine/paths.ts 的 assetUrl() 统一拼前缀。
+# 发布前先对「按子路径构建出的产物」跑一遍完整冒烟（vite preview + headless Chrome）。
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate levels & assets
+        run: npm run validate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build (GitHub Pages 子路径)
+        run: npm run build
+        env:
+          DEPLOY_BASE: /SuperMario/
+
+      - name: Smoke test against the built site
+        run: |
+          npx vite preview --port 4173 --strictPort &
+          sleep 2
+          npm run smoke
+        env:
+          DEPLOY_BASE: /SuperMario/
+          SMOKE_BASE_URL: http://localhost:4173/SuperMario/
+          CHROME_PATH: /usr/bin/google-chrome
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

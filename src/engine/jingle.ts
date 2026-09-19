@@ -20,6 +20,7 @@
  * 就没人可续播了；所以这里改为订阅开关。
  */
 import { musicEnabled, onMusicEnabledChange } from './musicSwitch'
+import { assetUrl } from './paths'
 
 /** 曲子名 → 素材地址。 */
 const JINGLES = {
@@ -124,7 +125,7 @@ export function playJingle(
 }
 
 function start(name: JingleName) {
-  const audio = new Audio(JINGLES[name])
+  const audio = new Audio(assetUrl(JINGLES[name]))
   audio.loop = false
   current = audio
   currentName = name
@@ -153,7 +154,7 @@ export function playStarTheme() {
     return
   }
 
-  starAudio = new Audio('/audio/music/starman.ogg')
+  starAudio = new Audio(assetUrl('/audio/music/starman.ogg'))
   starAudio.loop = true
   void starAudio.play().catch(() => undefined)
 }

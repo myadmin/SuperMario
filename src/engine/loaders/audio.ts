@@ -3,6 +3,7 @@
  * Sound specs are fetched from /sounds/<name>.json and decoded into AudioBuffers.
  */
 import AudioBoard from '../AudioBoard'
+import { assetUrl } from '../paths'
 import { loadJSON } from './loaders'
 
 type AudioSheet = { fx: Record<string, { url: string }> }
@@ -26,7 +27,7 @@ export function loadAudioBoard(name: string, audioContext: AudioContext): Promis
 
 export function createAudioLoader(context: AudioContext) {
   return function loadAudio(url: string): Promise<AudioBuffer> {
-    return fetch(url)
+    return fetch(assetUrl(url))
       .then((response) => response.arrayBuffer())
       .then((arrayBuffer) => context.decodeAudioData(arrayBuffer))
   }

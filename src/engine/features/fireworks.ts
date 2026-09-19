@@ -24,6 +24,7 @@
 import Entity from '../Entity'
 import Trait from '../Trait'
 import LifeLimit from '../traits/LifeLimit'
+import { assetUrl } from '../paths'
 import type GameContext from '../GameContext'
 import type Level from '../Level'
 
@@ -54,7 +55,7 @@ const FIREWORKS_SFX = '/audio/fireworks.ogg'
 
 /** 起爆音：一次性 HTMLAudio 播一遍（第一发起爆时由引信回调触发）。 */
 function playFireworksSound() {
-  const audio = new Audio(FIREWORKS_SFX)
+  const audio = new Audio(assetUrl(FIREWORKS_SFX))
   audio.loop = false
   void audio.play().catch(() => undefined)
 }
