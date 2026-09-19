@@ -73,8 +73,9 @@ export type ExitPipePatch = {
 export type BonusPipePatch = {
   /** 管口顶左格（管帽那行；管口占 [x, x+1] 两列）。 */
   mouth: BlockCell
-  /** 进管方向：DOWN＝站管口按 ↓ 进（入口），UP＝backTo 钻出来（出口）。 */
-  dir: 'DOWN' | 'UP'
+  /** 进管方向：DOWN＝站管口按 ↓ 进（入口），UP＝backTo 钻出来（出口），
+   *  RIGHT＝从左侧走进管口（奖励室的返程横管）。 */
+  dir: 'DOWN' | 'UP' | 'RIGHT' | 'LEFT'
   /** 门户盒：相对管口顶左格左上角的偏移与尺寸（像素）。 */
   portal: { offsetX: number; offsetY: number; width: number; height: number }
   /** 入口管：进哪一关。 */
@@ -128,6 +129,15 @@ export type LevelPatch = {
   bonusPipes?: BonusPipePatch[]
   /** upstream 已放好的奖励室返程 portal 的碰撞盒校正（不改 JSON）。 */
   bonusPortalFixes?: BonusPortalFix[]
+  /**
+   * 本项目新增：进关时**从入口水管里钻出来**（portal 的 id，须为 dir UP 的 bonusPipes）。
+   *
+   * 背景：1-2 结尾横管通向 uw-exit（地下出口），原版里马里奥是**从那边的管子里升上来**
+   * 的；而 `bootstrapPlayer` 只会把马里奥摆到检查点（站在管口边上）。「出生钻管」由
+   * `features/bonusRooms.ts` 消费：注入 UP portal 后，关卡第一帧把马里奥
+   * `connectEntity` 上去，向上插值一个管高、从管口钻出站稳。
+   */
+  spawnThroughPortal?: string
   /**
    * 走进终点城堡门之后去哪一关。**没登记就不注入触发**（`coin-*` / `debug-*` 这类子关
    * 本来就不该被推进表带着跑，否则 `startWorld()` 会去加载不存在的关卡）。
@@ -225,6 +235,20 @@ const LEVEL_PATCHES: Record<string, LevelPatch> = {
   'coin-room-1': {
     bonusPortalFixes: [{ match: [206, 184], pos: [206, 176], size: [24, 48] }],
   },
+  // coin-room-2（1-2 的奖励室）：JSON 里没有返程 portal（entities 为空），这里按它的
+  // 出口管口注入一个 RIGHT portal——管口瓦片是 exit-pipe-12h 图案的 pipe-cap-hor，
+  // 落在 (13,11)（y 176~192），管脸左侧即触发区。portal 盒照 coin-room-1 校正后的
+  // 尺寸（24×48、罩到地面），小 / 大马里奥贴墙站立都命中。不带 goesTo：走完管程转为
+  // 本关 EVENT_COMPLETE，由来时 1-2 入口管的 backTo 接管返程（从 109 列管钻出）。
+  'coin-room-2': {
+    bonusPipes: [
+      {
+        mouth: { x: 13, y: 11 },
+        dir: 'RIGHT',
+        portal: { offsetX: -8, offsetY: 0, width: 24, height: 48 },
+      },
+    ],
+  },
   // —— 以下奖励室关卡**无权威出处，未接** ——
   // _backup/js/level.js 里只有 1-1 一间地下奖励室（build1_1_sub，即本项目的
   // coin-room-1），其余奖励关没有任何「哪根管通向它 / 它通向哪」的记载，不发明：
@@ -233,6 +257,37 @@ const LEVEL_PATCHES: Record<string, LevelPatch> = {
   //   - uw-entrance：地下管道入口的过场关（pipe-uw-entrance 图案），无出处；
   //   - coin-clouds-1：云端奖励关，连管道图案都没有，无出处。
   '1-2': {
+    // 原版的隐藏金币块：1-2.json 里 6 枚 `metal` 中悬浮在半空的 5 枚
+    // （[29,8] / [46,7] / [69,8] / [73,8] / [150,8]，都在头部起跳可顶的高度）——
+    // 在原版里它们**不可见**，顶开才现身并出金币（用户实测报告「有些砖还没顶就
+    // 不能顶了」：它们此前被渲染成用过的实心块、顶不了）。唯一例外是 [89,2]：
+    // 它嵌在天花板（rows 2~3）里，是天花板的结构瓦片，保持可见（见 43ec7f2 的教训）。
+    hiddenBlocks: [
+      { x: 29, y: 8, content: 'coin' },
+      { x: 46, y: 7, content: 'coin' },
+      { x: 69, y: 8, content: 'coin' },
+      { x: 73, y: 8, content: 'coin' },
+      { x: 150, y: 8, content: 'coin' },
+    ],
+    // 原版 1-2 的奖励室管道对：第 103 列的 3 格高管**可进**（站上按 ↓，进 coin-room-2），
+    // 从奖励室返程后**从第 109 列的 4 格高管里钻出来**——「进左管、出右管」正是原版
+    // 1-2 这对管子的设计。接法与 1-1 的奖励室一致（入口挂 goesTo + backTo，出口只挂 id）；
+    // coin-room-2 的返程 portal 注入见下方 'coin-room-2'。
+    bonusPipes: [
+      {
+        mouth: { x: 103, y: 10 },
+        dir: 'DOWN',
+        goesTo: 'coin-room-2',
+        backTo: '1-2-bonus-exit',
+        portal: { offsetX: 0, offsetY: -16, width: 32, height: 32 },
+      },
+      {
+        mouth: { x: 109, y: 9 },
+        dir: 'UP',
+        id: '1-2-bonus-exit',
+        portal: { offsetX: 0, offsetY: 0, width: 32, height: 32 },
+      },
+    ],
     // 开场那排 5 枚问号块（col 10~14）只有第一枚装道具——原版：
     // "five ? Blocks. The first one contains a Magic Mushroom or Fire Flower,
     //  the other four ones contain coins"。
@@ -259,7 +314,22 @@ const LEVEL_PATCHES: Record<string, LevelPatch> = {
     nextLevel: '1-3',
   },
   // 原版 1-2 结尾管子通向的「地下出口」关：那边有旗杆 + 城堡，过关后接着走 1-3。
-  'uw-exit': { nextLevel: '1-3' },
+  // 原版里马里奥是从入口水管里**升上来**的（管子在本关左端 col 3，pipe-2h）——
+  // bootstrapPlayer 只会把他摆到检查点（管口边上），这里补「出生钻管」：
+  // 注入 UP portal（id uw-exit-entry）+ spawnThroughPortal 让 bonusRooms 在
+  // 关卡第一帧把他 connectEntity 上去、从管口钻出。
+  'uw-exit': {
+    bonusPipes: [
+      {
+        mouth: { x: 3, y: 11 },
+        dir: 'UP',
+        id: 'uw-exit-entry',
+        portal: { offsetX: 0, offsetY: 0, width: 32, height: 32 },
+      },
+    ],
+    spawnThroughPortal: 'uw-exit-entry',
+    nextLevel: '1-3',
+  },
   '1-3': { nextLevel: '1-4' },
   '1-4': { nextLevel: '2-1' },
   '2-1': { nextLevel: '2-2' },

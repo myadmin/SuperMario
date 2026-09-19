@@ -452,13 +452,65 @@ try {
       }
       return null
     }
-    return { ceilingBrick: read(10, 2), structureBrick: read(39, 7), ceilingMetal: read(89, 2), chance: read(10, 9) }
+    return { ceilingBrick: read(10, 2), structureBrick: read(39, 7), ceilingMetal: read(89, 2), chance: read(10, 9), hidden29: read(29, 8), hidden46: read(46, 7) }
   })
   check('G5. 1-2 瓦片：砖可顶(behavior=brick)、天花板 metal 可见、chance 已转换',
     t12.ceilingBrick.behavior === 'brick' && t12.structureBrick.behavior === 'brick' &&
       t12.ceilingMetal.hidden === false && t12.ceilingMetal.style === 'metal' &&
       t12.chance.behavior === 'chance',
     JSON.stringify(t12))
+  check('G5b. 1-2 悬浮隐藏块已入白名单（不可见、可顶）',
+    t12.hidden29.hidden === true && t12.hidden29.style === 'metal' && t12.hidden46.hidden === true,
+    JSON.stringify({ hidden29: t12.hidden29, hidden46: t12.hidden46 }))
+
+  // ---- H3. 1-2 的奖励室管道对（col 103 进 → coin-room-2 → col 109 出）
+  await page.evaluate(() => {
+    const m = window.mario
+    const power = [...m.traits.values()].find((t) => t.constructor.name === 'PowerState')
+    const mouthTop = 160                                   // 3 格高管口顶 y
+    m.pos.set(103 * 16 + 2, power.large ? mouthTop - 32 : mouthTop - 16)
+    m.vel.set(0, 0)
+    const pt = [...m.traits.values()].find((t) => t.constructor.name === 'PipeTraveller')
+    pt.direction.set(0, 0)
+    pt.direction.y = 1
+  })
+  await page.waitForFunction(
+    () => {
+      const h = window.__handle
+      const cur = h.sceneRunner.scenes[h.sceneRunner.sceneIndex]
+      return cur && cur.name === 'coin-room-2' && window.mario && cur.entities.has(window.mario)
+    },
+    { timeout: 15000 },
+  )
+  check('H3a. 站上 103 列管口按 ↓ → 进入 coin-room-2', true)
+
+  await page.evaluate(() => {
+    const m = window.mario
+    const power = [...m.traits.values()].find((t) => t.constructor.name === 'PowerState')
+    m.pos.set(202, power.large ? 176 : 192)                // 返程管口（x 200~224）前的地面
+    m.vel.set(0, 0)
+    const pt = [...m.traits.values()].find((t) => t.constructor.name === 'PipeTraveller')
+    pt.direction.set(0, 0)
+    pt.direction.x = 1
+  })
+  await page.waitForFunction(
+    () => {
+      const h = window.__handle
+      const cur = h.sceneRunner.scenes[h.sceneRunner.sceneIndex]
+      return cur && cur.name === '1-2' && window.mario && cur.entities.has(window.mario)
+    },
+    { timeout: 15000 },
+  )
+  await sleep(1800)                                        // 等钻管动画结束
+  const h3b = await page.evaluate(() => {
+    const m = window.mario
+    const power = [...m.traits.values()].find((t) => t.constructor.name === 'PowerState')
+    const expectY = power.large ? 112 : 128                // 4 格高管口顶 y=144，站上去脚底对齐
+    return { pos: { x: Math.round(m.pos.x), y: Math.round(m.pos.y) }, expectY }
+  })
+  check('H3b. 走进返程横管 → 从 109 列 4 格高管钻出回 1-2',
+    h3b.pos.x > 1730 && Math.abs(h3b.pos.y - h3b.expectY) < 8,
+    JSON.stringify(h3b))
 
   console.log('\n---- console/page/http errors ----')
   console.log(errors.length ? errors.join('\n') : '(none)')

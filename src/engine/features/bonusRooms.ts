@@ -34,9 +34,13 @@ import { registerLevelFeature } from '../levelFeatures'
 import type { LevelGrid, FoundTile } from '../levelFeatures'
 import { patchFor } from '../levelPatches'
 import type { BonusPipePatch, BlockCell } from '../levelPatches'
+import { connectEntity } from '../traits/Pipe'
+import { findPlayers } from '../player'
+import Entity from '../Entity'
+import Trait from '../Trait'
 import type { EntityFactory } from '../GameContext'
+import type GameContext from '../GameContext'
 import type Level from '../Level'
-import type Entity from '../Entity'
 
 /**
  * 上游 `setupEntities()` 对没有 id 的实体不直接放进 level.entities，而是押在一个
@@ -109,12 +113,61 @@ function injectPortal(level: Level, entityFactory: EntityFactory, tile: FoundTil
   level.entities.add(portal)
 }
 
+/** 按补丁声明的 id 找本关刚注入的 portal（供「出生钻管」定位）。 */
+function findPortalById(level: Level, id: string): Entity | undefined {
+  for (const entity of level.entities) {
+    if (entity.id === id) {
+      return entity
+    }
+  }
+  return undefined
+}
+
+/**
+ * 出生钻管：关卡第一帧把马里奥接上入口管（dir UP），让他从管口里升出来。
+ *
+ * 特性 setup 跑在 `bootstrapPlayer` 之前（马里奥还没进关卡），所以不能当场
+ * connectEntity——挂在代理实体上，等第一帧马里奥在关卡里了再接。接完即自删
+ * （一次性行为；Set 的 forEach 对中途删除是安全的）。
+ */
+class SpawnFromPipe extends Trait {
+  private connected = false
+
+  constructor(private portal: Entity) {
+    super()
+  }
+
+  update(entity: Entity, _gameContext: GameContext, level: Level) {
+    if (this.connected) {
+      return
+    }
+
+    const mario = firstPlayer(level)
+    if (!mario) {
+      return
+    }
+
+    this.connected = true
+    connectEntity(this.portal, mario)
+    level.entities.delete(entity)
+  }
+}
+
+function firstPlayer(level: Level): Entity | undefined {
+  for (const entity of findPlayers(level.entities)) {
+    return entity
+  }
+  return undefined
+}
+
 registerLevelFeature({
   name: 'bonus-rooms',
   setup(level, ctx) {
+    const patch = patchFor(ctx.name)
+
     // 进 / 出管：按管口瓦片注入（防重入同 exitPipe.hasPortal——管口旁已有 portal
     // 就不再注入，避免马里奥同时压进两个门户、两段插值打架）。
-    for (const spec of patchFor(ctx.name).bonusPipes ?? []) {
+    for (const spec of patch.bonusPipes ?? []) {
       const tile = findMouthTile(ctx.grids, spec.mouth)
       if (!tile) {
         // 补丁表与关卡数据对不上（管口瓦片不在），宁缺勿错。
@@ -130,13 +183,23 @@ registerLevelFeature({
 
     // 碰撞盒校正：upstream 放好的 portal 尺寸/位置不合适（大马里奥触发不了），
     // 原地改它而不是再注入一个（两个门户重叠会双触发）。
-    for (const fix of patchFor(ctx.name).bonusPortalFixes ?? []) {
+    for (const fix of patch.bonusPortalFixes ?? []) {
       const portal = findPortalNear(level, fix.match[0], fix.match[1])
       if (!portal) {
         continue
       }
       portal.pos.set(fix.pos[0], fix.pos[1])
       portal.size.set(fix.size[0], fix.size[1])
+    }
+
+    // 出生钻管（uw-exit）：从入口水管里升出来，与原版的出场方式一致。
+    if (patch.spawnThroughPortal) {
+      const portal = findPortalById(level, patch.spawnThroughPortal)
+      if (portal) {
+        const proxy = new Entity()
+        proxy.addTrait(new SpawnFromPipe(portal))
+        level.entities.add(proxy)
+      }
     }
   },
 })
