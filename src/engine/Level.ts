@@ -9,18 +9,53 @@ import MusicController from './MusicController'
 import EntityCollider from './EntityCollider'
 import Scene from './Scene'
 import TileCollider from './TileCollider'
+import Damage from './traits/Damage'
 import { clamp } from './math'
 import { findPlayers } from './player'
 import type Entity from './Entity'
 import type GameContext from './GameContext'
 
+/** 本项目新增：玩家不能走出镜头（原版 SMB 行为——镜头左/右缘对玩家都是墙）。 */
+function constrainPlayer(level: Level, player: Entity) {
+  // 死亡动画要穿越地形掉出画面，不参与约束
+  const damage = player.traits.get(Damage) as Damage | undefined
+  if (damage?.dying) {
+    return
+  }
+
+  const minX = level.camera.pos.x
+  if (player.pos.x < minX) {
+    player.pos.x = minX
+    if (player.vel.x < 0) {
+      player.vel.x = 0
+    }
+  }
+
+  const maxX = level.camera.pos.x + level.camera.size.x
+  if (player.bounds.right > maxX) {
+    player.bounds.right = maxX
+    if (player.vel.x > 0) {
+      player.vel.x = 0
+    }
+  }
+}
+
 function focusPlayer(level: Level) {
   for (const player of findPlayers(level.entities)) {
-    level.camera.pos.x = clamp(
+    // 原版 SMB 行为：镜头只随玩家**右移**、从不回卷（上游实现会跟着玩家往回滚，
+    // 玩家因此能走出镜头左缘、掉进画面外的坑里死亡——用户实测报告）。
+    const target = clamp(
       player.pos.x - 100,
       level.camera.min.x,
       level.camera.max.x - level.camera.size.x,
     )
+    if (target > level.camera.pos.x) {
+      level.camera.pos.x = target
+    }
+  }
+
+  for (const player of findPlayers(level.entities)) {
+    constrainPlayer(level, player)
   }
 }
 

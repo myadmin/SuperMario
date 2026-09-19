@@ -156,7 +156,7 @@ try {
         return { flipped: true, killed: k ? k.killed : null }
       }
     }
-    return { flipped: false }
+    return { flipped: false, via: 'none' }
   })
   check('B0. 顶块弹飞上面的敌人（打翻 + 砖保留）',
     goombaFlipped.found && flipState.flipped === true && flipState.killed === true,
@@ -211,6 +211,7 @@ try {
       const timer = findTrait('LevelTimer')
       const star = findTrait('StarPower')
       return {
+        camX: level ? Math.round(level.camera.pos.x) : null,
         levelName: level ? level.name : null,
         score: player ? player.score : null,
         coins: player ? player.coins : null,
@@ -277,6 +278,20 @@ try {
   check('P0. ESC 暂停：TIME 停走 + 位置冻结；再按继续倒计时',
     frozenOk,
     JSON.stringify({ t1: pz1.timerTime, t2: pz2.timerTime, pos1: pz1.pos, pos2: pz2.pos, t3: rz.timerTime }))
+
+  // ---- P1. 原版行为：镜头不回卷 + 玩家不能走出镜头左缘
+  // （此前镜头跟着玩家回卷，玩家能走出左缘、掉进画面外的坑里死亡——用户实测）
+  const camBefore = (await state()).camX
+  await page.evaluate((cx) => { window.mario.pos.set(cx + 60, 192); window.mario.vel.set(0, 0) }, camBefore)
+  await sleep(200)
+  await page.keyboard.down('a')
+  await sleep(1500)
+  await page.keyboard.up('a')
+  const sLeft = await state()
+  check('P1. 往回走：镜头不回卷、玩家被挡在镜头左缘（不掉出、不死亡）',
+    sLeft.levelName === '1-1' && sLeft.lives === 3 &&
+      sLeft.camX === camBefore && sLeft.marioPos.x >= camBefore && sLeft.marioPos.x <= camBefore + 20,
+    JSON.stringify({ camBefore, camX: sLeft.camX, lives: sLeft.lives, pos: sLeft.marioPos }))
 
   // ---- B1. 顶金币问号块（col 106；col 16/78 是道具块）
   await bump(106 * 16 + 1, 163)
