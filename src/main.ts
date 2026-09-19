@@ -1,3 +1,4 @@
+import './boot'          // 预加载素材 + 启动画面进度（先于 Phaser 执行）
 import Phaser from 'phaser'
 import { GameScene } from './scenes/GameScene'
 import { setupMusicButton } from './musicButton'

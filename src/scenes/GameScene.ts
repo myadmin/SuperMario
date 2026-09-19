@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { createGame, type GameHandle } from '../game'
+import { hideBoot } from '../boot'
 import type { KeyboardListener } from '../engine/input'
 
 /** Upstream's Timer used a fixed 1/60 step; we drive it from Phaser's tick. */
@@ -90,6 +91,8 @@ export class GameScene extends Phaser.Scene {
       ;(window as unknown as { __handle: unknown }).__handle = this.handle
 
       this.handle.start()
+      // 画布上此时已有游戏的「Loading 1-1...」/ 过场页——淡出启动画面，无缝交接。
+      hideBoot()
     }
 
     this.input.on(Phaser.Input.Events.POINTER_DOWN, start)
