@@ -12,7 +12,11 @@
  *   4. **小曲**：旗杆关此时 `level-clear` 已经在放（抓杆滑到底时起播，见
  *      `features/flag.ts`），等它放完；城堡关没有旗杆，此刻起播 `castle-clear`
  *      再等放完。音乐开关关着时跳过小曲，只留 1.2s 的收尾停顿；
- *   5. **切关**：小曲放完后 emit `Level.EVENT_TRIGGER`（`game.ts` 原有的监听会
+ *   5. **烟花**：进城堡那一刻 TIME 的个位数是 1 / 3 / 6 就放 1 / 3 / 6 发（原版规矩；
+ *      个数必须在序列启动时取样——启动即冻结计时，bonus 阶段还会把 TIME 清零），
+ *      与小曲同奏，见 `features/fireworks.ts`。settle 的结束取「小曲放完 + 一拍」
+ *      与「烟花放完 + 一拍」的更晚者，无烟花时与从前完全一致；
+ *   6. **切关**：settle 结束后 emit `Level.EVENT_TRIGGER`（`game.ts` 原有的监听会
  *      `startWorld()` 进入下一关）。
  *
  * 序列由一个挂在关卡里的代理实体驱动（与 `features/flag.ts` 的 FlagSlide 同一写法）。
@@ -28,6 +32,7 @@ import LevelTimer from '../traits/LevelTimer'
 import Player from '../traits/Player'
 import Level from '../Level'
 import { playJingle, playingJingle, type JingleName } from '../jingle'
+import { scheduleFireworks } from './fireworks'
 import { findPlayers } from '../player'
 import type GameContext from '../GameContext'
 
@@ -113,11 +118,15 @@ class ExitSequenceDriver extends Trait {
   private totalTime = 0
   /** 序列开始时是否已有小曲在放（旗杆关的 level-clear 是滑杆时起播的）。 */
   private jingleWasPlaying = false
+  /** settle 阶段要为烟花保留的时长（秒）：全部放完 + 一拍静默；无烟花为 0。 */
+  private fireworksHold = 0
 
   constructor(
     private level: Level,
     private mario: Entity,
     private options: ExitSequenceOptions,
+    /** 烟花发数：序列启动时按 TIME 个位数取样（见 startExitSequence）。 */
+    private fireworksCount: number,
   ) {
     super()
   }
@@ -155,10 +164,13 @@ class ExitSequenceDriver extends Trait {
     }
 
     if (this.phase === 'settle') {
-      // 小曲放完（`playingJingle()` 归 null）再停一拍，然后交给 game.ts 切关。
-      // 音乐关着时小曲不会响，这里只等 SETTLE_TIME。
+      // 结束条件取「小曲放完 + 一拍」与「烟花全部放完 + 一拍」的更晚者——两个都满足
+      // 才切关。无烟花时 fireworksHold 是 0、烟花一侧立刻满足，行为与从前完全一致。
+      // 音乐关着时小曲不会响，小曲一侧只等 SETTLE_TIME。
       const jingleOver = playingJingle() === null
-      if ((jingleOver && this.settleTime >= SETTLE_TIME) || this.totalTime > MAX_SEQUENCE_TIME) {
+      const jingleReady = jingleOver && this.settleTime >= SETTLE_TIME
+      const fireworksReady = this.settleTime >= this.fireworksHold
+      if ((jingleReady && fireworksReady) || this.totalTime > MAX_SEQUENCE_TIME) {
         this.finish()
       }
     }
@@ -173,6 +185,10 @@ class ExitSequenceDriver extends Trait {
   private beginSettle() {
     this.phase = 'settle'
     this.settleTime = 0
+
+    // 烟花此刻起爆（个数在序列启动时已按 TIME 个位数定好）：返回值是「全部放完 +
+    // 一拍静默」要占用的 settle 时长，喂给上面的结束条件。第一发起爆时播 fireworks.ogg。
+    this.fireworksHold = scheduleFireworks(this.level, this.fireworksCount, this.options.doorX)
 
     // 城堡关（无旗杆）此刻还没有小曲：起播收尾曲。旗杆关的已经在放，等它结束即可。
     if (!this.jingleWasPlaying) {
@@ -210,7 +226,13 @@ export function startExitSequence(level: Level, options: ExitSequenceOptions) {
   mario.getTrait(LevelTimer).frozen = true
   mario.getTrait(Damage).endSequence = true
 
-  const driver = new ExitSequenceDriver(level, mario, options)
+  // 烟花发数：原版规则是「进城堡那一刻 TIME 的个位数是 1 / 3 / 6 就放 1 / 3 / 6 发」。
+  // 必须在启动时刻取样——序列一启动计时就冻结，bonus 阶段还会把 currentTime 滚到 0，
+  // 拖到 settle 再读的话读到的永远是 0。
+  const digit = Math.floor(mario.getTrait(LevelTimer).currentTime) % 10
+  const fireworksCount = digit === 1 || digit === 3 || digit === 6 ? digit : 0
+
+  const driver = new ExitSequenceDriver(level, mario, options, fireworksCount)
   const animator = new Entity()
   animator.addTrait(driver)
   level.entities.add(animator)

@@ -218,6 +218,7 @@ try {
         chance16: tileAt(16, 9),
         starmen: countTrait('StarPickup'),
         mushrooms: countTrait('MushroomPickup'),
+        fireworks: countTrait('Firework'),
       }
     })
 
@@ -307,6 +308,76 @@ try {
     s.starActive === true && s.score === 1200,
     JSON.stringify({ active: s.starActive, score: s.score }))
 
+  // ---- H. 隐藏金币奖励室（1-1 ↔ coin-room-1）
+  // H1: 两个门户已注入（入口 DOWN 带 goesTo+backTo，出口 UP 带 id）
+  const portals = await page.evaluate(() => {
+    const h = window.__handle
+    const cur = h.sceneRunner.scenes[h.sceneRunner.sceneIndex]
+    const found = []
+    for (const e of cur.entities) {
+      if (e.props && e.props.dir !== undefined) {
+        found.push({ dir: e.props.dir, id: e.id ?? null, goesTo: e.props.goesTo?.name ?? null, backTo: e.props.backTo ?? null, x: e.pos.x, y: e.pos.y })
+      }
+    }
+    return found
+  })
+  const entry = portals.find((p) => p.dir === 'DOWN' && p.goesTo === 'coin-room-1')
+  const exit = portals.find((p) => p.dir === 'UP' && p.id === 'bonus-exit-1-1')
+  check('H1. 奖励室门户已注入（入口 DOWN→coin-room-1 + backTo，出口 UP 带 id）',
+    !!entry && entry.backTo === 'bonus-exit-1-1' && !!exit,
+    JSON.stringify(portals))
+
+  // H2: 全程 E2E——站上 57 列管口按 ↓（直接置 PipeTraveller.direction）进奖励室，
+  // 再走进奖励室的返程横管，从 163 列管口钻出回到 1-1。
+  await page.evaluate(() => {
+    const m = window.mario
+    // 大马里奥站在管口上：脚底 y=144 → pos.y=112；x 落在门户 [912,944] 内
+    m.pos.set(920, 112)
+    m.vel.set(0, 0)
+    const pt = [...m.traits.values()].find((t) => t.constructor.name === 'PipeTraveller')
+    pt.direction.y = 1
+  })
+  await page.waitForFunction(
+    () => {
+      const h = window.__handle
+      const cur = h.sceneRunner.scenes[h.sceneRunner.sceneIndex]
+      return cur && cur.name === 'coin-room-1' && window.mario && cur.entities.has(window.mario)
+    },
+    { timeout: 15000 },
+  )
+  check('H2a. 钻进 57 列水管 → 进入 coin-room-1', true)
+
+  await page.evaluate(() => {
+    const h = window.__handle
+    const cur = h.sceneRunner.scenes[h.sceneRunner.sceneIndex]
+    const m = window.mario
+    // 奖励室返程门户在 x [206,230]：马里奥横向整个落在门户内，纵向站在地面 y 208
+    m.pos.set(208, 176)
+    m.vel.set(0, 0)
+    const pt = [...m.traits.values()].find((t) => t.constructor.name === 'PipeTraveller')
+    pt.direction.set(0, 0)
+    pt.direction.x = 1
+  })
+  await page.waitForFunction(
+    () => {
+      const h = window.__handle
+      const cur = h.sceneRunner.scenes[h.sceneRunner.sceneIndex]
+      return cur && cur.name === '1-1' && window.mario && cur.entities.has(window.mario)
+    },
+    { timeout: 15000 },
+  )
+  // 等钻管动画结束（connectEntity 向上插值 1s），马里奥应站在 163 列管口顶（y≈144，大马里奥）
+  await sleep(2000)
+  s = await state()
+  await page.evaluate(() => {
+    const m = window.mario
+    const pt = [...m.traits.values()].find((t) => t.constructor.name === 'PipeTraveller')
+    pt.direction.set(0, 0)
+  })
+  check('H2b. 走进返程横管 → 从 163 列管口钻出回 1-1',
+    s.levelName === '1-1' && s.marioPos && Math.abs(s.marioPos.x - 2617) < 24 && Math.abs(s.marioPos.y - 144) < 8,
+    JSON.stringify({ level: s.levelName, pos: s.marioPos }))
+
   // ---- G1. 抓旗杆（旗杆实体 x≈3168-3180）
   await page.evaluate(() => {
     const m = window.mario
@@ -318,20 +389,32 @@ try {
   check('G1. 抓杆：计时冻结 + 高度计分',
     s.timerFrozen === true && s.score > 1200,
     JSON.stringify({ frozen: s.timerFrozen, score: s.score, time: s.timerTime }))
+  // 冻结之后再钉 TIME=361（个位 1 → 1 发烟花）：冻结后不再倒走，而烟花发数是
+  // 滑杆到底（序列启动）那一刻取样的——此刻设置正好被采样。
+  await page.evaluate(() => {
+    const m = window.mario
+    const timer = [...m.traits.values()].find((t) => t.constructor.name === 'LevelTimer')
+    timer.currentTime = 361
+  })
 
   // ---- G2~G4. 通关序列走完并推进到 1-2（滑杆+走位+结算+小曲 ≈ 12s）
   const trace = []
   let sawHidden = false
   let sawBonus = false
+  let sawFireworks = false
+  let sawFireworksMax = 0
   for (let i = 0; i < 60; i++) {
     await sleep(500)
     s = await state()
-    trace.push(`${s.levelName}|score=${s.score}|time=${s.timerTime}|in=${s.marioInLevel}`)
+    trace.push(`${s.levelName}|score=${s.score}|time=${s.timerTime}|in=${s.marioInLevel}|fw=${s.fireworks}`)
     if (s.levelName === '1-1' && s.marioInLevel === false && s.timerFrozen) sawHidden = true
     if (s.levelName === '1-1' && s.timerTime === 0 && s.timerFrozen) sawBonus = true
+    if (s.fireworks >= 1) sawFireworks = true
+    if (s.fireworks > sawFireworksMax) sawFireworksMax = s.fireworks
     if (s.levelName === '1-2') break
   }
   check('G2. 通关序列：马里奥进门消失 + 时间结算归零', sawHidden && sawBonus, trace.slice(-4).join('  '))
+  check('G2b. TIME 个位为 1 → 放 1 发烟花', sawFireworks && sawFireworksMax === 1, `max fireworks seen = ${sawFireworksMax}`)
   check('G3. 小曲放完后推进到 1-2', s.levelName === '1-2', s.levelName)
 
   await page.waitForFunction(
