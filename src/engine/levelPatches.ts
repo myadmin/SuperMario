@@ -55,6 +55,47 @@ export type ExitPipePatch = {
   portal: { offsetX: number; offsetY: number; width: number; height: number }
 }
 
+/**
+ * 隐藏奖励室的管道（`features/bonusRooms.ts` 消费）。一对管分两头声明：
+ *
+ *   - **入口管**（dir DOWN，站上管口按 ↓）：`goesTo` 进奖励室，`backTo` 是**本关**
+ *     返程出口实体的 id。接线方式对照上游自己的权威样例 `public/levels/debug-pipe.json`
+ *     （入口 portal 挂 `goesTo + backTo`，出口 portal 只挂 `id`）：game.ts 的
+ *     EVENT_PIPE_COMPLETE 处理器在**奖励室发出 EVENT_COMPLETE** 时重载本关并
+ *     `connectEntity(backTo 实体)`，马里奥从那根管子里钻出来——所以奖励室那头的
+ *     portal 恰恰**不能带 goesTo**（带了会在奖励室里直接切回 1-1 出生点、永不钻管）。
+ *   - **出口管**（dir UP）：只声明 `id`。`Pipe.collides` 要求旅行者的
+ *     `PipeTraveller.direction` 等于 UP——行走 / 跳跃 / 按 ↑ 都不会凑出这个状态
+ *     （它只在 connectEntity 直接 addTraveller 时被置上），所以立在地上不会被误触发。
+ */
+export type BonusPipePatch = {
+  /** 管口顶左格（管帽那行；管口占 [x, x+1] 两列）。 */
+  mouth: BlockCell
+  /** 进管方向：DOWN＝站管口按 ↓ 进（入口），UP＝backTo 钻出来（出口）。 */
+  dir: 'DOWN' | 'UP'
+  /** 门户盒：相对管口顶左格左上角的偏移与尺寸（像素）。 */
+  portal: { offsetX: number; offsetY: number; width: number; height: number }
+  /** 入口管：进哪一关。 */
+  goesTo?: string
+  /** 入口管：返程时马里奥从**本关**哪个实体钻出（该实体的 id）。 */
+  backTo?: string
+  /** 出口管：本实体的 id，供奖励室那头的 backTo 引用。 */
+  id?: string
+}
+
+/**
+ * upstream 已经在关卡 JSON 里放好的奖励室返程 portal 的**碰撞盒校正**
+ * （`features/bonusRooms.ts` 消费）。JSON 一字不改，只在运行时按距离找到该实体、
+ * 把位置 / 尺寸改成大马里奥也能触发的值（props 不动，理由见各条数据的注释）。
+ */
+export type BonusPortalFix = {
+  /** 现成实体的 JSON pos（像素），按距离匹配（同 exitPipe.hasPortal 的 32/48 容差）。 */
+  match: [number, number]
+  /** 校正后的位置与尺寸（像素）。 */
+  pos: [number, number]
+  size: [number, number]
+}
+
 /** 一关的补丁。缺省字段＝这一关没有这类内容。 */
 export type LevelPatch = {
   /**
@@ -77,6 +118,10 @@ export type LevelPatch = {
   lifts?: LiftSpec[]
   /** 结尾横管（每条声明对应一种管口瓦片）。 */
   exitPipes?: ExitPipePatch[]
+  /** 隐藏奖励室的进 / 出管道（每条一根管，见 BonusPipePatch 的接线说明）。 */
+  bonusPipes?: BonusPipePatch[]
+  /** upstream 已放好的奖励室返程 portal 的碰撞盒校正（不改 JSON）。 */
+  bonusPortalFixes?: BonusPortalFix[]
   /**
    * 走进终点城堡门之后去哪一关。**没登记就不注入触发**（`coin-*` / `debug-*` 这类子关
    * 本来就不该被推进表带着跑，否则 `startWorld()` 会去加载不存在的关卡）。
@@ -121,8 +166,63 @@ const LEVEL_PATCHES: Record<string, LevelPatch> = {
       { x: 94, y: 9, content: 'coins10' },
       { x: 101, y: 9, content: 'star' },
     ],
+    // 隐藏金币奖励室（coin-room-1）的进 / 出管。出处：用户早年那版 _backup/js/level.js
+    // 的 build1_1——`placePipe(57, 4, true, '1-1-sub', 40, 160)`（第 57 列 4 格高管可进，
+    // 通向地下奖励室）与 `placePipe(163, 2)`（第 163 列 2 格高管是奖励室的返程出口），
+    // 与真实 SMB 1-1 布局一致。1-1.json 里两根管的瓦片都在（pipe-4h 放 [57,9]、
+    // pipe-2h 放 [163,11]，管口顶分别在 y=144 / y=176，管口各占两列），只是 portal
+    // 实体没进 JSON，这里补上。
+    //
+    // 门户盒计算（`Pipe.collides` 对竖直方向要求马里奥**左右边都落在门户内**；能否
+    // 触发还要求 BoundingBox 严格重叠，即马里奥的盒必须真压进门户盒）：
+    //   - 入口：管口占 x 912..944，门户取同宽 32、正好罩住两格管口——双脚都踩在管口
+    //     上（左缘 ≥912、右缘 ≤944）必落在门户内；贴在管壁外侧站时必有一边越界，
+    //     不会误触发。y 方向：站在管口上的马里奥脚底 y=144（Solid 会把脚精确钉在
+    //     瓦片顶，重叠判断是严格大于，所以门户顶必须高于 144），取 144-16=128、高 32
+    //     （罩到 y 160）——小马里奥（16 高，y 128..144）与大马里奥（32 高，y 112..144）
+    //     都与之重叠；按下 ↓ 触发后向下插值门户高 32＝沉两格，视觉正好没入管口。
+    //   - 出口：门户罩住两格管身（x 2608..2640，y 176..208）。connectEntity 会把
+    //     马里奥对中到门户、底边对齐门户底边（y 208，管内），再向上插值门户高 32，
+    //     正好停在管口顶（y 176）站稳。UP 方向不会被行走误触发（见 BonusPipePatch）。
+    bonusPipes: [
+      {
+        mouth: { x: 57, y: 9 },
+        dir: 'DOWN',
+        goesTo: 'coin-room-1',
+        backTo: 'bonus-exit-1-1',
+        portal: { offsetX: 0, offsetY: -16, width: 32, height: 32 },
+      },
+      {
+        mouth: { x: 163, y: 11 },
+        dir: 'UP',
+        id: 'bonus-exit-1-1',
+        portal: { offsetX: 0, offsetY: 0, width: 32, height: 32 },
+      },
+    ],
     nextLevel: '1-2',
   },
+  // 返程出口：coin-room-1.json 的 entities 里 upstream 已经放了一个 pipe-portal
+  // （pos [206,184]，props 只有 {dir:'RIGHT'}，**没有 goesTo**）——这正是上游
+  // debug-pipe.json 里「奖励室出口」的标准形态：不带 goesTo 的 portal 走完管程后，
+  // game.ts 的 EVENT_PIPE_COMPLETE 处理器会把它转成本关的 EVENT_COMPLETE，触发来时
+  // 入口管 backTo 登记的返程监听。所以 props 一个字都不用改，**不能**给它加
+  // goesTo/backTo（加了会在奖励室里直接切回 1-1 出生点、永不钻管，见 bonusRooms.ts
+  // 文件头）。唯一的问题在碰撞盒：管口脸（pipe-insert-hor-top / -bottom，behavior
+  // ground）占 col 13 / row 11~12（y 176..208），大马里奥贴墙站时身体 y 176..208，
+  // 顶边 176 < 门户顶 184，`Pipe.collides` 的横向检查直接 return——大马里奥出不了
+  // 门。校正成 y 176、高 48（同 exitPipe.ts 修 1-2 结尾横管的思路）：小 / 大 / 蹲姿
+  // 都罩住。该实体在 JSON 里没有 id，setupEntities 会把它押进 Spawner（相机靠近才
+  // 放出），特性模块翻押运名单找到它再校正，见 features/bonusRooms.ts。
+  'coin-room-1': {
+    bonusPortalFixes: [{ match: [206, 184], pos: [206, 176], size: [24, 48] }],
+  },
+  // —— 以下奖励室关卡**无权威出处，未接** ——
+  // _backup/js/level.js 里只有 1-1 一间地下奖励室（build1_1_sub，即本项目的
+  // coin-room-1），其余奖励关没有任何「哪根管通向它 / 它通向哪」的记载，不发明：
+  //   - coin-room-2..5：结构与 coin-room-1 类似（都有 exit-pipe-12h 出口管、
+  //     检查点 [24,48]），但 entities 全空（连 pipe-portal 都没有），且无出处；
+  //   - uw-entrance：地下管道入口的过场关（pipe-uw-entrance 图案），无出处；
+  //   - coin-clouds-1：云端奖励关，连管道图案都没有，无出处。
   '1-2': {
     // 开场那排 5 枚问号块（col 10~14）只有第一枚装道具——原版：
     // "five ? Blocks. The first one contains a Magic Mushroom or Fire Flower,
