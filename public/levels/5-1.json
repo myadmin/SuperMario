@@ -1,0 +1,330 @@
+{
+    "_note": [
+        "5-1 地表关（重建段说明）：布局按原版 SMB World 5-1 的公开地图资料重建",
+        "（开头长直道板栗仔/乌龟混编 → 两根带食人花的水管夹一道坑 → 砖排与问号块 →",
+        "两段高地与三道深坑 → 结尾阶梯 + 旗杆 + 城堡）。原版的 Koopa Paratroopa（绿飞龟）",
+        "实体本工程没有，统一用 koopa-green 地面乌龟替代；原版的乌龟炮台（Turtle Cannon）",
+        "用 overworld-pattern 的 cannon-2h 炮台瓦片 + 隐形 cannon 实体（每 4s 发出 bullet）",
+        "还原。砖排中段的星砖 / 隐藏 1UP 块坐标在报告中交由 levelPatches 登记。"
+    ],
+    "spriteSheet": "overworld",
+    "musicSheet": "overworld",
+    "patternSheet": "overworld-pattern",
+    "checkpoints": [
+        [40, 192]
+    ],
+
+    "layers": [
+        {
+            "tiles": [
+                {
+                    "style": "sky",
+                    "ranges": [
+                        [0, 206, 0, 15]
+                    ]
+                },
+                {
+                    "style": "ground",
+                    "behavior": "ground",
+                    "ranges": [
+                        [0, 32, 13, 2],
+                        [35, 25, 13, 2],
+                        [60, 3, 11, 4],
+                        [63, 12, 9, 6],
+                        [75, 20, 13, 2],
+                        [99, 16, 13, 2],
+                        [115, 3, 10, 5],
+                        [118, 12, 7, 8],
+                        [133, 73, 13, 2]
+                    ]
+                }
+            ]
+        },
+        {
+            "tiles": [
+                {
+                    "pattern": "cloud-single",
+                    "ranges": [
+                        [8, 3],
+                        [19, 2],
+                        [52, 3],
+                        [67, 2],
+                        [102, 3],
+                        [117, 2],
+                        [150, 3],
+                        [165, 2]
+                    ]
+                },
+                {
+                    "pattern": "cloud-double",
+                    "ranges": [
+                        [36, 2],
+                        [86, 2],
+                        [136, 2],
+                        [186, 2]
+                    ]
+                },
+                {
+                    "pattern": "cloud-triple",
+                    "ranges": [
+                        [70, 3],
+                        [120, 3],
+                        [170, 3]
+                    ]
+                },
+                {
+                    "pattern": "bush-single",
+                    "ranges": [
+                        [23, 12],
+                        [90, 12],
+                        [139, 12],
+                        [192, 12]
+                    ]
+                },
+                {
+                    "pattern": "bush-double",
+                    "ranges": [
+                        [41, 12],
+                        [100, 12],
+                        [148, 12]
+                    ]
+                },
+                {
+                    "pattern": "bush-triple",
+                    "ranges": [
+                        [53, 12],
+                        [134, 12],
+                        [172, 12]
+                    ]
+                },
+                {
+                    "style": "bush-3",
+                    "ranges": [
+                        [19, 12],
+                        [163, 12]
+                    ]
+                },
+                {
+                    "pattern": "hill-small",
+                    "ranges": [
+                        [24, 11],
+                        [78, 11],
+                        [108, 11],
+                        [156, 11],
+                        [176, 11]
+                    ]
+                },
+                {
+                    "pattern": "hill-large",
+                    "ranges": [
+                        [0, 10],
+                        [48, 10],
+                        [99, 10],
+                        [144, 10]
+                    ]
+                },
+                {
+                    "style": "bricks-top",
+                    "behavior": "brick",
+                    "ranges": [
+                        [40, 3, 9],
+                        [51, 2, 9],
+                        [77, 3, 9],
+                        [85, 2, 9],
+                        [106, 4, 9],
+                        [120, 2, 3],
+                        [146, 2, 9]
+                    ]
+                },
+                {
+                    "style": "chance",
+                    "behavior": "chance",
+                    "ranges": [
+                        [43, 9],
+                        [50, 9],
+                        [53, 9],
+                        [68, 5],
+                        [72, 5],
+                        [80, 9],
+                        [105, 9],
+                        [110, 9],
+                        [123, 3],
+                        [148, 9],
+                        [152, 9]
+                    ]
+                },
+                {
+                    "style": "metal",
+                    "behavior": "ground",
+                    "ranges": [
+                        [112, 9]
+                    ]
+                },
+                {
+                    "pattern": "cannon-2h",
+                    "ranges": [
+                        [124, 5],
+                        [137, 11]
+                    ]
+                },
+                {
+                    "pattern": "chocolate-stairs-4h",
+                    "ranges": [
+                        [88, 9],
+                        [158, 9]
+                    ]
+                },
+                {
+                    "pattern": "chocolate-stairs-final",
+                    "ranges": [
+                        [182, 5]
+                    ]
+                },
+                {
+                    "pattern": "flag-pole-green",
+                    "ranges": [
+                        [196, 2]
+                    ]
+                },
+                {
+                    "pattern": "castle-small",
+                    "ranges": [
+                        [200, 8]
+                    ]
+                },
+                {
+                    "pattern": "pipe-2h",
+                    "ranges": [
+                        [28, 11],
+                        [105, 11]
+                    ]
+                },
+                {
+                    "pattern": "pipe-3h",
+                    "ranges": [
+                        [44, 10],
+                        [140, 10]
+                    ]
+                },
+                {
+                    "pattern": "pipe-4h",
+                    "ranges": [
+                        [56, 9]
+                    ]
+                }
+            ]
+        }
+    ],
+
+    "entities": [
+        {
+            "name": "goomba-brown",
+            "pos": [320, 192]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [344, 192]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [768, 192]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [792, 192]
+        },
+        {
+            "name": "koopa-green",
+            "pos": [832, 184]
+        },
+        {
+            "name": "piranha-plant",
+            "pos": [456, 152]
+        },
+        {
+            "name": "piranha-plant",
+            "pos": [712, 136]
+        },
+        {
+            "name": "piranha-plant",
+            "pos": [904, 120]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [1056, 128]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [1080, 128]
+        },
+        {
+            "name": "koopa-green",
+            "pos": [1136, 120]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [1312, 192]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [1336, 192]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [1600, 192]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [1624, 192]
+        },
+        {
+            "name": "koopa-green",
+            "pos": [1696, 184]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [1936, 96]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [1960, 96]
+        },
+        {
+            "name": "koopa-green",
+            "pos": [2008, 88]
+        },
+        {
+            "name": "cannon",
+            "pos": [1984, 98]
+        },
+        {
+            "name": "cannon",
+            "pos": [2192, 182]
+        },
+        {
+            "name": "piranha-plant",
+            "pos": [2248, 136]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [2320, 192]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [2344, 192]
+        },
+        {
+            "name": "koopa-green",
+            "pos": [2416, 184]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [2624, 192]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [2648, 192]
+        }
+    ],
+    "triggers": []
+}

@@ -1,0 +1,173 @@
+{
+    "_note": [
+        "5-4 水上城堡（重建段说明）：原版 SMB 5-4 是 2-4 的加强版（更多火棒/喷火龙），",
+        "结尾桥段（Bowser 桥）下方在原版里就是用水色贴图的——本关按任务设定做成「水上城堡」：",
+        "castle 表的 waves + tile-red 铺水坑与桥下水面，bridge 图案搭两段 14 格水桥，",
+        "metal-alt 墩柱当水中踏石与炮台基座。引擎没有火棒/喷火龙/库巴/升降梯（升降梯仅在",
+        "levelPatches 登记后由 Lift 实体提供），战斗段以炮台（隐形 cannon 实体架在 metal-alt",
+        "墩上，castle 表没有 cannon 贴图，bullet 每 4s 射出）+ 蓝龟替代。城堡正面的砖墙沿用",
+        "城堡图案的约定不带 behavior（非实心背景，马里奥要能走进门洞）；门洞内放置 goto",
+        "触发器推进到 7-2（castle 表没有 castle-arch 贴图，features/castle.ts 扫不到门，",
+        "故用上游自带的 JSON goto 触发器机制，与 1-2 遗留触发器同型）。checkpoint 用",
+        "[40,96]（同 1-4：入口阶梯 floor 在 row 10，[[40,192]] 会嵌进实心里）。"
+    ],
+    "spriteSheet": "castle",
+    "musicSheet": "castle",
+    "patternSheet": "castle-pattern",
+    "checkpoints": [
+        [40, 96]
+    ],
+
+    "layers": [
+        {
+            "tiles": [
+                {
+                    "style": "sky",
+                    "ranges": [
+                        [0, 180, 0, 15]
+                    ]
+                }
+            ]
+        },
+        {
+            "tiles": [
+                {
+                    "style": "ground",
+                    "behavior": "ground",
+                    "ranges": [
+                        [0, 14, 10, 5],
+                        [17, 9, 10, 5],
+                        [29, 12, 10, 5],
+                        [45, 16, 10, 5],
+                        [64, 18, 13, 2],
+                        [95, 11, 10, 5],
+                        [119, 61, 10, 5],
+                        [0, 14, 3, 2],
+                        [68, 10, 6, 2]
+                    ]
+                },
+                {
+                    "pattern": "entrance-stairs",
+                    "ranges": [
+                        [0, 6]
+                    ]
+                },
+                {
+                    "style": "waves",
+                    "ranges": [
+                        [14, 3, 13],
+                        [26, 3, 13],
+                        [41, 4, 13],
+                        [61, 3, 13],
+                        [82, 14, 13],
+                        [106, 14, 13]
+                    ]
+                },
+                {
+                    "style": "tile-red",
+                    "ranges": [
+                        [14, 3, 14],
+                        [26, 3, 14],
+                        [41, 4, 14],
+                        [61, 3, 14],
+                        [82, 14, 14],
+                        [106, 14, 14]
+                    ]
+                },
+                {
+                    "style": "chance",
+                    "behavior": "chance",
+                    "ranges": [
+                        [34, 6]
+                    ]
+                },
+                {
+                    "style": "metal-alt",
+                    "behavior": "ground",
+                    "ranges": [
+                        [42, 8],
+                        [52, 8],
+                        [52, 9],
+                        [57, 8],
+                        [57, 9],
+                        [130, 8],
+                        [130, 9]
+                    ]
+                },
+                {
+                    "pattern": "bridge",
+                    "behavior": "ground",
+                    "ranges": [
+                        [82, 9],
+                        [106, 9]
+                    ]
+                },
+                {
+                    "style": "bricks",
+                    "ranges": [
+                        [164, 12, 4, 4],
+                        [164, 5, 8, 2],
+                        [171, 5, 8, 2],
+                        [161, 3, 2, 8],
+                        [176, 3, 2, 8]
+                    ]
+                },
+                {
+                    "pattern": "toad",
+                    "ranges": [
+                        [167, 8]
+                    ]
+                },
+                {
+                    "style": "tile-red",
+                    "ranges": [
+                        [161, 1, 1],
+                        [163, 1, 1],
+                        [176, 1, 1],
+                        [178, 1, 1],
+                        [165, 1, 3],
+                        [167, 1, 3],
+                        [169, 1, 3],
+                        [171, 1, 3],
+                        [173, 1, 3],
+                        [175, 1, 3]
+                    ]
+                }
+            ]
+        }
+    ],
+
+    "entities": [
+        {
+            "name": "goomba-blue",
+            "pos": [576, 144]
+        },
+        {
+            "name": "goomba-blue",
+            "pos": [784, 144]
+        },
+        {
+            "name": "cannon",
+            "pos": [832, 146]
+        },
+        {
+            "name": "cannon",
+            "pos": [912, 146]
+        },
+        {
+            "name": "cannon",
+            "pos": [2080, 146]
+        },
+        {
+            "name": "goomba-blue",
+            "pos": [2032, 144]
+        }
+    ],
+    "triggers": [
+        {
+            "type": "goto",
+            "name": "7-2",
+            "pos": [2704, 128]
+        }
+    ]
+}

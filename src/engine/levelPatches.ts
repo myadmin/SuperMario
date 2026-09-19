@@ -139,6 +139,12 @@ export type LevelPatch = {
    */
   spawnThroughPortal?: string
   /**
+   * 本项目新增：无门洞城堡的终点触发（X-4 城堡关专用）。原版城堡关的结尾是
+   * 「过桥 → 蘑菇娃房间」——没有 castle-arch 门洞瓦片，`features/castle.ts`
+   * 找不到门时退回用这里登记的位置（桥尾 toad 房间）注入终点触发。
+   */
+  exitTrigger?: BlockCell
+  /**
    * 走进终点城堡门之后去哪一关。**没登记就不注入触发**（`coin-*` / `debug-*` 这类子关
    * 本来就不该被推进表带着跑，否则 `startWorld()` 会去加载不存在的关卡）。
    * 最后 7-3 循环回 1-1。
@@ -332,15 +338,194 @@ const LEVEL_PATCHES: Record<string, LevelPatch> = {
     nextLevel: '1-3',
   },
   '1-3': { nextLevel: '1-4' },
-  '1-4': { nextLevel: '2-1' },
+  // 城堡关没有门洞瓦片：终点触发放在桥尾 toad 房间（castle.ts 退化走它）
+  '1-4': { exitTrigger: { x: 154, y: 11 }, nextLevel: '2-1' },
   '2-1': { nextLevel: '2-2' },
-  '2-2': { nextLevel: '2-3' },
+  // 水关通关出口：原版游到尽头的水管口（col 189 / row 7，管口朝右），游进去直接
+  // 进入下一关（没有旗杆）。管口瓦片 (189,7) 为实心，游泳贴上并纵向对齐即触发。
+  '2-2': {
+    bonusPipes: [
+      {
+        mouth: { x: 189, y: 7 },
+        dir: 'RIGHT',
+        goesTo: '2-3',
+        portal: { offsetX: -8, offsetY: -8, width: 24, height: 48 },
+      },
+    ],
+    nextLevel: '2-3',
+  },
   '2-3': { nextLevel: '2-4' },
-  '2-4': { nextLevel: '3-1' },
-  '3-1': { nextLevel: '5-3' },
-  '5-3': { nextLevel: '7-2' },
-  '7-2': { nextLevel: '7-3' },
-  '7-3': { nextLevel: '1-1' },
+  '2-4': { exitTrigger: { x: 153, y: 11 }, nextLevel: '3-1' },
+  '3-1': { nextLevel: '3-2' },
+  // 3-2 地下关：结尾横管 → uw-exit-3（管口瓦片 col 150 / row 8）
+  '3-2': {
+    exitPipes: [
+      {
+        mouthStyles: ['pipe-insert-hor-top'],
+        dir: 'RIGHT',
+        goesTo: 'uw-exit-3',
+        portal: { offsetX: -16, offsetY: -16, width: 24, height: 48 },
+      },
+    ],
+    powerUpBlocks: [{ x: 20, y: 9 }],
+    nextLevel: 'uw-exit-3',
+  },
+  'uw-exit-3': { nextLevel: '3-3' },
+  '3-3': { nextLevel: '3-4' },
+  // 3-4 城堡：无门洞瓦片，走 exitTrigger（桥尾 toad 房间 [140,11]）
+  '3-4': { exitTrigger: { x: 140, y: 11 }, powerUpBlocks: [{ x: 24, y: 5 }], nextLevel: '4-1' },
+  // ---------------- World 5（重建关，出处：MarioWiki / NESMaps 的 World 5 地图）
+  '5-1': {
+    powerUpBlocks: [{ x: 43, y: 9 }, { x: 123, y: 3 }],
+    hiddenBlocks: [{ x: 112, y: 9, content: 'oneup' }],
+    bricks: [{ x: 51, y: 9, content: 'star' }],
+    nextLevel: '5-2',
+  },
+  '5-2': {
+    exitPipes: [
+      {
+        mouthStyles: ['pipe-insert-hor-top'],
+        dir: 'RIGHT',
+        goesTo: 'uw-exit-5',
+        portal: { offsetX: -16, offsetY: -16, width: 24, height: 48 },
+      },
+    ],
+    powerUpBlocks: [{ x: 8, y: 9 }],
+    hiddenBlocks: [
+      { x: 22, y: 9, content: 'coin' },
+      { x: 56, y: 8, content: 'coin' },
+      { x: 92, y: 9, content: 'coin' },
+      { x: 130, y: 9, content: 'coin' },
+    ],
+    nextLevel: 'uw-exit-5',
+  },
+  'uw-exit-5': {
+    bonusPipes: [
+      {
+        mouth: { x: 0, y: 11 },
+        dir: 'UP',
+        id: 'uw-exit-5-entry',
+        portal: { offsetX: 0, offsetY: 0, width: 32, height: 32 },
+      },
+    ],
+    spawnThroughPortal: 'uw-exit-5-entry',
+    nextLevel: '5-3',
+  },
+  // 5-4 水上城堡：无门洞瓦片，走 exitTrigger（桥尾 toad 房间 [167,8]）；其 JSON 里
+  // 作者是按旧思路写的 goto 7-2 触发器，这里禁用并统一走收尾序列（5-4 → 6-1）。
+  '5-4': {
+    disableUpstreamTriggers: true,
+    exitTrigger: { x: 167, y: 8 },
+    powerUpBlocks: [{ x: 34, y: 6 }],
+    nextLevel: '6-1',
+  },
+  '5-3': { nextLevel: '5-4' },
+  '7-2': {
+    bonusPipes: [
+      {
+        mouth: { x: 189, y: 7 },
+        dir: 'RIGHT',
+        goesTo: '7-3',
+        portal: { offsetX: -8, offsetY: -8, width: 24, height: 48 },
+      },
+    ],
+    nextLevel: '7-3',
+  },
+  '7-3': { nextLevel: '7-4' },
+
+  // ---------------- World 6（重建关，出处：MarioWiki / NESMaps 的 World 6 地图）
+  '6-1': {
+    powerUpBlocks: [{ x: 24, y: 9 }, { x: 96, y: 9 }],
+    hiddenBlocks: [{ x: 70, y: 8, content: 'coin' }],
+    nextLevel: '6-2',
+  },
+  // 6-2 地下关：结尾横管 → uw-exit-6（管口瓦片 col 164 / row 8）
+  '6-2': {
+    exitPipes: [
+      {
+        mouthStyles: ['pipe-insert-hor-top'],
+        dir: 'RIGHT',
+        goesTo: 'uw-exit-6',
+        portal: { offsetX: -16, offsetY: -16, width: 24, height: 48 },
+      },
+    ],
+    powerUpBlocks: [{ x: 22, y: 9 }],
+    nextLevel: 'uw-exit-6',
+  },
+  'uw-exit-6': { nextLevel: '6-3' },
+  '6-3': { nextLevel: '6-4' },
+  // 6-4 城堡：无门洞瓦片，走 exitTrigger（桥尾 toad 房间 [156,11]）
+  '6-4': { exitTrigger: { x: 156, y: 11 }, powerUpBlocks: [{ x: 31, y: 5 }], nextLevel: '7-1' },
+
+  // ---------------- World 7（重建关，出处：MarioWiki / NESMaps 的 World 7 地图）
+  '7-1': {
+    powerUpBlocks: [{ x: 46, y: 9 }],
+    hiddenBlocks: [{ x: 80, y: 8, content: 'coin' }],
+    nextLevel: '7-2',
+  },
+  // 7-4 城堡：无门洞瓦片，走 exitTrigger（桥尾 toad 房间 [160,11]）
+  '7-4': { exitTrigger: { x: 160, y: 11 }, powerUpBlocks: [{ x: 27, y: 5 }], nextLevel: '8-1' },
+
+  // ---------------- World 8（最终世界，重建关，出处：MarioWiki / NESMaps 的 World 8 地图）
+  '8-1': { nextLevel: '8-2' },
+  // 8-2 地下关：结尾横管 → uw-exit-8（管口瓦片 col 176 / row 8）
+  '8-2': {
+    exitPipes: [
+      {
+        mouthStyles: ['pipe-insert-hor-top'],
+        dir: 'RIGHT',
+        goesTo: 'uw-exit-8',
+        portal: { offsetX: -16, offsetY: -16, width: 24, height: 48 },
+      },
+    ],
+    nextLevel: 'uw-exit-8',
+  },
+  'uw-exit-8': { nextLevel: '8-3' },
+  '8-3': { nextLevel: '8-4' },
+  // 8-4 最终城堡：无门洞瓦片，走 exitTrigger（桥尾 toad 房间 [170,11]）。
+  // 原版 8-4 是终点（Bowser 战 + 公主结局，无素材无法实现）——这里通关后循环回 1-1。
+  '8-4': { exitTrigger: { x: 170, y: 11 }, nextLevel: '1-1' },
+
+  // ---------------- World 4（重建关，出处：MarioWiki / NESMaps 的 World 4 地图，
+  // 由关卡作者按规范还原；无法逐格确认的段落作者已在 _note 标注「重建段」）
+  '4-1': {
+    powerUpBlocks: [{ x: 19, y: 9 }, { x: 111, y: 9 }],
+    hiddenBlocks: [{ x: 46, y: 5, content: 'oneup' }],
+    bricks: [{ x: 118, y: 9, content: 'coins10' }],
+    nextLevel: '4-2',
+  },
+  '4-2': {
+    exitPipes: [
+      {
+        mouthStyles: ['pipe-insert-hor-top'],
+        dir: 'RIGHT',
+        goesTo: 'uw-exit-4',
+        portal: { offsetX: -16, offsetY: -16, width: 24, height: 48 },
+      },
+    ],
+    lifts: [
+      { x: 2512, top: 80, bottom: 208, width: 3, startAt: 'top' },
+      { x: 2736, top: 80, bottom: 208, width: 3, startAt: 'bottom' },
+    ],
+    powerUpBlocks: [{ x: 15, y: 9 }, { x: 32, y: 9 }, { x: 117, y: 9 }, { x: 183, y: 9 }],
+    hiddenBlocks: [
+      { x: 28, y: 8, content: 'coin' },
+      { x: 29, y: 8, content: 'coin' },
+    ],
+    bricks: [{ x: 53, y: 9, content: 'star' }],
+    nextLevel: 'uw-exit-4',
+  },
+  'uw-exit-4': { nextLevel: '4-3' },
+  '4-3': {
+    powerUpBlocks: [{ x: 53, y: 4 }],
+    nextLevel: '4-4',
+  },
+  '4-4': {
+    exitTrigger: { x: 154, y: 11 },
+    powerUpBlocks: [{ x: 32, y: 7 }, { x: 88, y: 4 }],
+    hiddenBlocks: [{ x: 74, y: 8, content: 'coin' }],
+    nextLevel: '5-1',
+  },
 }
 
 /** 没有登记的关卡共用这一张空表（不要就地改它）。 */

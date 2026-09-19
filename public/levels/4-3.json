@@ -1,0 +1,216 @@
+{
+    "_note": "SMB World 4-3 重建（地表运动关，宽 166 格）。布局依据 MarioWiki 的 4-3 结构：全程树（蘑菇）平台 + 下方深坑、金币悬浮在平台间、第三高平台上方的 ? 块装道具、台面上红库巴、结尾经石阶上旗杆 + 城堡。原版的红库巴 / 红帕太空龟用 koopa-green 替代，天平式升降台（scale lift）与垂直升降台无对应实体，改为静态树台衔接（重建段）。树台冠层直接用 tree-small / tree-large-top / tree-large-bottom 样式 + behavior ground（树图案本身无碰撞，不能直接用）；树干 tree-trunk 为无 behavior 装饰。需要 levelPatches 登记：powerUpBlocks [(53,4)]、nextLevel '4-4'。",
+
+    "spriteSheet": "overworld",
+    "musicSheet": "overworld",
+    "patternSheet": "overworld-pattern",
+    "checkpoints": [
+        [40, 192]
+    ],
+
+    "layers": [
+        {
+            "tiles": [
+                {
+                    "style": "sky",
+                    "ranges": [
+                        [0, 166, 0, 15]
+                    ]
+                },
+                {
+                    "style": "ground",
+                    "behavior": "ground",
+                    "ranges": [
+                        [0, 16, 13, 2],
+                        [129, 37, 13, 2]
+                    ]
+                }
+            ]
+        },
+        {
+            "tiles": [
+                {
+                    "pattern": "cloud-double",
+                    "ranges": [
+                        [3, 3],
+                        [19, 2],
+                        [51, 3],
+                        [99, 3],
+                        [114, 2],
+                        [147, 3],
+                        [162, 2]
+                    ]
+                },
+                {
+                    "pattern": "cloud-single",
+                    "ranges": [
+                        [9, 7],
+                        [35, 7],
+                        [38, 6],
+                        [46, 11],
+                        [57, 7],
+                        [76, 11],
+                        [83, 7],
+                        [86, 6],
+                        [94, 11],
+                        [124, 11],
+                        [131, 7],
+                        [134, 6],
+                        [142, 11],
+                        [153, 7]
+                    ]
+                },
+                {
+                    "pattern": "castle-small",
+                    "ranges": [
+                        [0, 8]
+                    ]
+                },
+                {
+                    "style": "tree-small",
+                    "behavior": "ground",
+                    "ranges": [
+                        [20, 3, 10],
+                        [36, 3, 6],
+                        [44, 3, 9],
+                        [60, 3, 8],
+                        [67, 3, 6],
+                        [84, 3, 5],
+                        [91, 3, 8],
+                        [108, 3, 9],
+                        [115, 3, 9]
+                    ]
+                },
+                {
+                    "style": "tree-large-top",
+                    "behavior": "ground",
+                    "ranges": [
+                        [27, 5, 7],
+                        [51, 5, 6],
+                        [74, 5, 8],
+                        [98, 5, 6],
+                        [121, 5, 7]
+                    ]
+                },
+                {
+                    "style": "tree-large-bottom",
+                    "behavior": "ground",
+                    "ranges": [
+                        [27, 5, 8],
+                        [51, 5, 7],
+                        [74, 5, 9],
+                        [98, 5, 7],
+                        [121, 5, 8]
+                    ]
+                },
+                {
+                    "style": "tree-trunk",
+                    "ranges": [
+                        [21, 11],
+                        [21, 12],
+                        [29, 9],
+                        [29, 10],
+                        [37, 7],
+                        [37, 8],
+                        [45, 10],
+                        [53, 8],
+                        [53, 9],
+                        [61, 9],
+                        [68, 7],
+                        [68, 8],
+                        [76, 10],
+                        [85, 6],
+                        [85, 7],
+                        [92, 9],
+                        [100, 8],
+                        [100, 9],
+                        [109, 10],
+                        [116, 10],
+                        [123, 9],
+                        [123, 10]
+                    ]
+                },
+                {
+                    "style": "chance",
+                    "behavior": "chance",
+                    "ranges": [
+                        [53, 4]
+                    ]
+                },
+                {
+                    "style": "coin",
+                    "behavior": "coin",
+                    "ranges": [
+                        [24, 2, 8],
+                        [33, 2, 5],
+                        [41, 2, 8],
+                        [48, 2, 7],
+                        [57, 2, 6],
+                        [64, 2, 6],
+                        [71, 2, 6],
+                        [81, 2, 4],
+                        [88, 2, 6],
+                        [95, 2, 6],
+                        [105, 2, 7],
+                        [112, 2, 7],
+                        [118, 2, 5]
+                    ]
+                },
+                {
+                    "pattern": "chocolate-stairs-final",
+                    "ranges": [
+                        [138, 5]
+                    ]
+                },
+                {
+                    "pattern": "flag-pole-green",
+                    "ranges": [
+                        [152, 2]
+                    ]
+                },
+                {
+                    "pattern": "castle-small",
+                    "ranges": [
+                        [156, 8]
+                    ]
+                }
+            ]
+        }
+    ],
+
+    "entities": [
+        {
+            "name": "goomba-brown",
+            "pos": [176, 192]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [200, 192]
+        },
+        {
+            "name": "koopa-green",
+            "pos": [464, 88]
+        },
+        {
+            "name": "koopa-green",
+            "pos": [832, 72]
+        },
+        {
+            "name": "koopa-green",
+            "pos": [1200, 104]
+        },
+        {
+            "name": "koopa-green",
+            "pos": [1584, 72]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [2080, 192]
+        },
+        {
+            "name": "goomba-brown",
+            "pos": [2104, 192]
+        }
+    ],
+    "triggers": []
+}

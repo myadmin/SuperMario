@@ -73,12 +73,17 @@ registerLevelFeature({
     const arches = ARCH_STYLES.flatMap((style) => findTiles(ctx.grids, style))
     const finials = FINIAL_STYLES.flatMap((style) => findTiles(ctx.grids, style))
     const arch = pickExitArch(arches, finials)
-    if (!arch) {
-      return
-    }
 
     const next = patchFor(ctx.name).nextLevel
     if (!next) {
+      return
+    }
+
+    // 城堡关（X-4）没有门洞瓦片：原版的结尾是「过桥 → 蘑菇娃房间」，桥尾的 toad
+    // 房间坐标由 levelPatches 的 exitTrigger 登记——在那里注入终点触发，走同一条
+    // 收尾序列（自动走位 → 消失 → 时间结算 → 小曲 → 切关）。
+    const endTrigger = arch ?? patchFor(ctx.name).exitTrigger
+    if (!endTrigger) {
       return
     }
 
@@ -86,9 +91,9 @@ registerLevelFeature({
     // 里上游构造的同形）、收尾小曲。城堡关放 castle-clear，其余放 level-clear
     // （旗杆关的 level-clear 由 flag.ts 在滑到底时起播，序列不会重复起播）。
     const options = {
-      doorX: arch.x + DOOR_WIDTH / 2,
+      doorX: endTrigger.x + DOOR_WIDTH / 2,
       nextLevel: next,
-      spec: { type: 'goto' as const, name: next, pos: [arch.x, arch.y] as [number, number] },
+      spec: { type: 'goto' as const, name: next, pos: [endTrigger.x, endTrigger.y] as [number, number] },
       jingle: (ctx.spec.musicSheet === 'castle' ? 'castle-clear' : 'level-clear') as JingleName,
     }
 
@@ -108,7 +113,7 @@ registerLevelFeature({
     const entity = new Entity()
     entity.addTrait(trigger)
     entity.size.set(DOOR_WIDTH, DOOR_HEIGHT)
-    entity.pos.set(arch.x, arch.y)
+    entity.pos.set(endTrigger.x, endTrigger.y)
     level.entities.add(entity)
 
     // 旗杆滑到底（原版：抓杆落地后马里奥自动走进城堡）也走同一条收尾序列。

@@ -1,0 +1,220 @@
+{
+    "_note": "SMB World 4-2 重建（地下，宽 200 格，天花板坠入开场）。布局依据 MarioWiki 的 4-2 结构：早期砖结构（末块装道具）、三栗子怪 + 左侧上方问号块、? 块组（底排右中装道具）、隐藏块（原版通豆茎，本项目豆茎/Warp 区无实现，改为隐藏金币块）、四根食人花管、第二管后星块、石台群、升降桥双坑（ lifts 需 levelPatches 登记，规格同 1-2）、结尾砖台 + 横向出口管（exit-pipe-8h，管口 (187,8)）。原版 Buzzy Beetle 用 goomba-blue 替代、红库巴用 koopa-blue；第三根管通金币房的支线未接（coin-room 未登记）。需要 levelPatches 登记：exitPipes [{mouthStyles:['pipe-insert-hor-top'],dir:'RIGHT',goesTo:'uw-exit-4',portal:{offsetX:-16,offsetY:-16,width:24,height:48}}]（管口瓦片 col 187 / row 8）、powerUpBlocks [(15,9),(32,9),(117,9),(183,9)]、hiddenBlocks [{x:28,y:8,content:'coin'},{x:29,y:8,content:'coin'}]、bricks [{x:53,y:9,content:'star'}]、lifts [{x:2512,top:80,bottom:208,width:3,startAt:'top'},{x:2736,top:80,bottom:208,width:3,startAt:'bottom'}]。",
+
+    "spriteSheet": "underworld",
+    "musicSheet": "underworld",
+    "patternSheet": "underworld-pattern",
+    "checkpoints": [
+        [40, 48]
+    ],
+
+    "layers": [
+        {
+            "tiles": [
+                {
+                    "style": "sky",
+                    "ranges": [
+                        [0, 200, 0, 15]
+                    ]
+                },
+                {
+                    "style": "ground",
+                    "behavior": "ground",
+                    "ranges": [
+                        [0, 36, 13, 2],
+                        [39, 41, 13, 2],
+                        [83, 45, 13, 2],
+                        [131, 25, 13, 2],
+                        [163, 7, 13, 2],
+                        [177, 23, 13, 2]
+                    ]
+                }
+            ]
+        },
+        {
+            "tiles": [
+                {
+                    "style": "bricks",
+                    "behavior": "brick",
+                    "ranges": [
+                        [0, 1, 2, 11],
+                        [6, 150, 2],
+                        [177, 21, 2],
+                        [198, 2, 2, 11],
+                        [12, 3, 9],
+                        [53, 9],
+                        [100, 6, 9],
+                        [180, 3, 9],
+                        [185, 14, 10, 3]
+                    ]
+                },
+                {
+                    "style": "chance",
+                    "behavior": "chance",
+                    "ranges": [
+                        [15, 9],
+                        [24, 8],
+                        [30, 4, 9],
+                        [31, 2, 5],
+                        [116, 3, 9],
+                        [183, 9]
+                    ]
+                },
+                {
+                    "style": "metal",
+                    "behavior": "ground",
+                    "ranges": [
+                        [28, 8],
+                        [29, 8]
+                    ]
+                },
+                {
+                    "style": "coin",
+                    "behavior": "coin",
+                    "ranges": [
+                        [12, 3, 8],
+                        [84, 3, 9],
+                        [90, 1, 10],
+                        [94, 1, 10],
+                        [97, 1, 9],
+                        [102, 2, 7],
+                        [112, 3, 10],
+                        [180, 2, 8]
+                    ]
+                },
+                {
+                    "pattern": "chocolate-stack-2h",
+                    "ranges": [
+                        [90, 11],
+                        [94, 11]
+                    ]
+                },
+                {
+                    "pattern": "chocolate-stack-3h",
+                    "ranges": [
+                        [97, 10]
+                    ]
+                },
+                {
+                    "pattern": "chocolate-stairs-4h",
+                    "ranges": [
+                        [152, 9]
+                    ]
+                },
+                {
+                    "pattern": "chocolate-stairs-2h",
+                    "ranges": [
+                        [182, 11]
+                    ]
+                },
+                {
+                    "pattern": "pipe-3h",
+                    "ranges": [
+                        [44, 10],
+                        [62, 10]
+                    ]
+                },
+                {
+                    "pattern": "pipe-4h",
+                    "ranges": [
+                        [50, 9],
+                        [147, 9]
+                    ]
+                },
+                {
+                    "pattern": "pipe-2h",
+                    "ranges": [
+                        [56, 11],
+                        [140, 11]
+                    ]
+                },
+                {
+                    "pattern": "exit-pipe-8h",
+                    "ranges": [
+                        [187, 2]
+                    ]
+                }
+            ]
+        }
+    ],
+
+    "entities": [
+        {
+            "name": "goomba-blue",
+            "pos": [384, 192]
+        },
+        {
+            "name": "goomba-blue",
+            "pos": [400, 192]
+        },
+        {
+            "name": "goomba-blue",
+            "pos": [416, 192]
+        },
+        {
+            "name": "koopa-blue",
+            "pos": [760, 184]
+        },
+        {
+            "name": "piranha-plant",
+            "pos": [712, 136]
+        },
+        {
+            "name": "piranha-plant",
+            "pos": [808, 120]
+        },
+        {
+            "name": "goomba-blue",
+            "pos": [832, 192]
+        },
+        {
+            "name": "goomba-blue",
+            "pos": [856, 192]
+        },
+        {
+            "name": "piranha-plant",
+            "pos": [904, 152]
+        },
+        {
+            "name": "piranha-plant",
+            "pos": [1000, 136]
+        },
+        {
+            "name": "goomba-blue",
+            "pos": [1408, 192]
+        },
+        {
+            "name": "goomba-blue",
+            "pos": [1432, 192]
+        },
+        {
+            "name": "koopa-blue",
+            "pos": [1664, 184]
+        },
+        {
+            "name": "koopa-blue",
+            "pos": [1688, 184]
+        },
+        {
+            "name": "goomba-blue",
+            "pos": [2312, 192]
+        },
+        {
+            "name": "goomba-blue",
+            "pos": [2336, 192]
+        },
+        {
+            "name": "piranha-plant",
+            "pos": [2248, 152]
+        },
+        {
+            "name": "piranha-plant",
+            "pos": [2360, 120]
+        },
+        {
+            "name": "koopa-blue",
+            "pos": [2464, 120]
+        }
+    ],
+    "triggers": []
+}

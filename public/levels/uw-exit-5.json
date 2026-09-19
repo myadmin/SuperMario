@@ -1,0 +1,83 @@
+{
+    "_note": [
+        "uw-exit-5 地表过场小关（重建段说明）：5-2 结尾横向出口管的落点，结构与 uw-exit 同型——",
+        "左端一根 pipe-2h（原版里马里奥从这根管子里升上来，需在 levelPatches 登记",
+        "spawnThroughPortal + dir UP 的 bonusPipes），短地面 + 旗杆 + 城堡，无敌人。",
+        "走进城堡门由 features/castle.ts 注入触发（需登记 nextLevel）。"
+    ],
+    "spriteSheet": "overworld",
+    "musicSheet": "overworld",
+    "patternSheet": "overworld-pattern",
+    "checkpoints": [
+        [40, 192]
+    ],
+
+    "layers": [
+        {
+            "tiles": [
+                {
+                    "style": "sky",
+                    "ranges": [
+                        [0, 21, 0, 15]
+                    ]
+                },
+                {
+                    "style": "ground",
+                    "behavior": "ground",
+                    "ranges": [
+                        [0, 21, 13, 2]
+                    ]
+                }
+            ]
+        },
+        {
+            "tiles": [
+                {
+                    "pattern": "cloud-single",
+                    "ranges": [
+                        [5, 3]
+                    ]
+                },
+                {
+                    "pattern": "hill-small",
+                    "ranges": [
+                        [7, 11]
+                    ]
+                },
+                {
+                    "pattern": "bush-single",
+                    "ranges": [
+                        [12, 12]
+                    ]
+                },
+                {
+                    "style": "bush-3",
+                    "ranges": [
+                        [20, 12]
+                    ]
+                },
+                {
+                    "pattern": "pipe-2h",
+                    "ranges": [
+                        [0, 11]
+                    ]
+                },
+                {
+                    "pattern": "flag-pole-green",
+                    "ranges": [
+                        [11, 2]
+                    ]
+                },
+                {
+                    "pattern": "castle-small",
+                    "ranges": [
+                        [15, 8]
+                    ]
+                }
+            ]
+        }
+    ],
+
+    "entities": [],
+    "triggers": []
+}

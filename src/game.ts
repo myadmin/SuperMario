@@ -48,6 +48,8 @@ export type GameHandle = {
   mario: Entity
   /** The loaded bitmap font (used for the loading screen). */
   font: Font
+  /** 加载一个关卡并返回 Level（不入场景队列）——供冒烟测试做全关卡运行时加载检查。 */
+  loadLevel: (name: string) => Promise<Level>
   /**
    * 场景队列（本项目新增，给调试 / 自动检查用）。
    *
@@ -257,6 +259,7 @@ export async function createGame({
     start: () => startWorld('1-1'),
     font: font as Font,
     sceneRunner,
+    loadLevel,
   }
 
   return game

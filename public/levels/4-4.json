@@ -1,0 +1,164 @@
+{
+    "_note": "SMB World 4-4 重建（城堡，宽 160 格）。布局依据 MarioWiki 的 4-4 结构：入口阶梯 → 熔岩坑 → 砖迷宫两段（本项目的关卡无「走错回圈」机制，原版两条岔路线性化为砖坎 + 垂檐的蛇行道）、第二厅经石阶上砖台高路、尽头桥 + Boss（原版 Fake Bowser / Fire-Bar / Podoboo 无对应实体，以藏在砖墙里的 cannon 发射 bullet、桥上 koopa-blue 与熔岩坑替代）。结尾按本项目城堡关 1-4 / 2-4 的既有惯例用 bridge + toad 收尾——castle-pattern 图案表里没有 castle-small / castle-large，castle 精灵表也没有 castle-arch 门洞瓦片，因此无法做门洞式结尾（重建段）。cannon 实体是隐形发射器（castle 表无 cannon 瓦片），坐标即 bullet 出现点，分别藏在砖坎 col 45、col 64 与桥尾墙 col 142 内。需要 levelPatches 登记：powerUpBlocks [(32,7),(88,4)]、hiddenBlocks [{x:74,y:8,content:'coin'}]、nextLevel（下一关 5-1 尚不存在，暂接 5-3 或等 5-1 落地）。",
+
+    "spriteSheet": "castle",
+    "musicSheet": "castle",
+    "patternSheet": "castle-pattern",
+    "checkpoints": [
+        [40, 96]
+    ],
+
+    "layers": [
+        {
+            "tiles": [
+                {
+                    "style": "sky",
+                    "ranges": [
+                        [0, 160, 0, 15]
+                    ]
+                }
+            ]
+        },
+        {
+            "tiles": [
+                {
+                    "style": "ground",
+                    "behavior": "ground",
+                    "ranges": [
+                        [0, 25, 2, 3],
+                        [25, 103, 2],
+                        [0, 25, 10, 5],
+                        [28, 20, 10, 5],
+                        [51, 44, 10, 5],
+                        [95, 13, 13, 2],
+                        [111, 18, 13, 2],
+                        [142, 3, 9, 6],
+                        [145, 15, 13, 2]
+                    ]
+                },
+                {
+                    "style": "waves",
+                    "ranges": [
+                        [25, 3, 12],
+                        [48, 3, 12],
+                        [108, 3, 12],
+                        [129, 13, 13]
+                    ]
+                },
+                {
+                    "style": "tile-red",
+                    "ranges": [
+                        [25, 3, 13, 2],
+                        [48, 3, 13, 2],
+                        [108, 3, 13, 2],
+                        [129, 13, 14]
+                    ]
+                },
+                {
+                    "style": "bricks",
+                    "behavior": "brick",
+                    "ranges": [
+                        [28, 20, 5],
+                        [51, 22, 5],
+                        [33, 1, 8, 2],
+                        [39, 1, 8, 2],
+                        [45, 1, 8, 2],
+                        [36, 1, 6],
+                        [42, 1, 6],
+                        [58, 1, 8, 2],
+                        [64, 1, 8, 2],
+                        [70, 1, 8, 2],
+                        [61, 1, 6],
+                        [67, 1, 6],
+                        [83, 15, 7]
+                    ]
+                },
+                {
+                    "style": "metal",
+                    "behavior": "ground",
+                    "ranges": [
+                        [80, 9],
+                        [74, 8]
+                    ]
+                },
+                {
+                    "style": "chance",
+                    "behavior": "chance",
+                    "ranges": [
+                        [32, 2, 7],
+                        [60, 7],
+                        [61, 7],
+                        [88, 4],
+                        [89, 4]
+                    ]
+                },
+                {
+                    "style": "coin",
+                    "behavior": "coin",
+                    "ranges": [
+                        [30, 3, 8],
+                        [41, 3, 8],
+                        [54, 3, 8],
+                        [72, 2, 8],
+                        [84, 4, 6],
+                        [92, 2, 6],
+                        [98, 3, 12]
+                    ]
+                },
+                {
+                    "pattern": "entrance-stairs",
+                    "ranges": [
+                        [0, 6]
+                    ]
+                },
+                {
+                    "pattern": "pipe-3h",
+                    "ranges": [
+                        [76, 7]
+                    ]
+                },
+                {
+                    "pattern": "bridge",
+                    "behavior": "ground",
+                    "ranges": [
+                        [129, 9]
+                    ]
+                },
+                {
+                    "pattern": "toad",
+                    "ranges": [
+                        [154, 11]
+                    ]
+                }
+            ]
+        }
+    ],
+
+    "entities": [
+        {
+            "name": "cannon",
+            "pos": [720, 144]
+        },
+        {
+            "name": "cannon",
+            "pos": [1024, 144]
+        },
+        {
+            "name": "piranha-plant",
+            "pos": [1224, 88]
+        },
+        {
+            "name": "cannon",
+            "pos": [1632, 192]
+        },
+        {
+            "name": "koopa-blue",
+            "pos": [2128, 136]
+        },
+        {
+            "name": "cannon",
+            "pos": [2272, 144]
+        }
+    ],
+    "triggers": []
+}

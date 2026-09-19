@@ -1,0 +1,79 @@
+{
+    "_note": "4-2 出口管的落点过场（地下出口，宽 26 格，overworld 主题）。结构拷贝 uw-exit.json：地面 + 旗杆（flag-pole-green）+ 城堡（castle-small），无敌人。按任务约定用 checkpoints [[40,192]]（落在管口旁的地面上），因此不放入口水管（uw-exit 的出生钻管方案需要把检查点挪到管口边并登记 bonusPipes + spawnThroughPortal，如主线想要原版「从管里升上来」的表现可自行改用该方案）。通关由 castle 门洞触发收尾序列，需要 levelPatches 登记 nextLevel '4-3'。",
+
+    "spriteSheet": "overworld",
+    "musicSheet": "overworld",
+    "patternSheet": "overworld-pattern",
+    "checkpoints": [
+        [40, 192]
+    ],
+
+    "layers": [
+        {
+            "tiles": [
+                {
+                    "style": "sky",
+                    "ranges": [
+                        [0, 26, 0, 15]
+                    ]
+                },
+                {
+                    "style": "ground",
+                    "behavior": "ground",
+                    "ranges": [
+                        [0, 26, 13, 2]
+                    ]
+                }
+            ]
+        },
+        {
+            "tiles": [
+                {
+                    "pattern": "cloud-single",
+                    "ranges": [
+                        [8, 3]
+                    ]
+                },
+                {
+                    "pattern": "cloud-double",
+                    "ranges": [
+                        [20, 1]
+                    ]
+                },
+                {
+                    "pattern": "hill-large",
+                    "ranges": [
+                        [5, 10]
+                    ]
+                },
+                {
+                    "pattern": "hill-small",
+                    "ranges": [
+                        [22, 11]
+                    ]
+                },
+                {
+                    "style": "bush-3",
+                    "ranges": [
+                        [14, 12]
+                    ]
+                },
+                {
+                    "pattern": "flag-pole-green",
+                    "ranges": [
+                        [12, 2]
+                    ]
+                },
+                {
+                    "pattern": "castle-small",
+                    "ranges": [
+                        [17, 8]
+                    ]
+                }
+            ]
+        }
+    ],
+
+    "entities": [],
+    "triggers": []
+}

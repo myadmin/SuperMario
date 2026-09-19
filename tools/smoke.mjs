@@ -478,6 +478,29 @@ try {
   )
   check('G4. 进入 1-2（马里奥在关卡中）', true)
 
+  // ---- L. 全关卡运行时加载检查（每关走一遍真实 loader + 特性注入）
+  // debug-flag.json 是上游遗留的旧 schema 关卡，加载即抛错（validate 已白名单），跳过。
+  const LEVEL_NAMES = [
+    '1-1', '1-2', '1-3', '1-4', '2-1', '2-2', '2-3', '2-4',
+    '3-1', '3-2', '3-3', '3-4', '4-1', '4-2', '4-3', '4-4',
+    '5-1', '5-2', '5-3', '5-4', '6-1', '6-2', '6-3', '6-4',
+    '7-1', '7-2', '7-3', '7-4', '8-1', '8-2', '8-3', '8-4',
+    'uw-exit-3', 'uw-exit-4', 'uw-exit-5', 'uw-exit-6', 'uw-exit-8',
+    'coin-clouds-1', 'coin-room-1', 'coin-room-2', 'coin-room-3', 'coin-room-4', 'coin-room-5',
+    'uw-entrance', 'uw-exit',
+    'debug-coin', 'debug-level', 'debug-pipe', 'debug-progression',
+  ]
+  const loadFails = []
+  for (const name of LEVEL_NAMES) {
+    try {
+      await page.evaluate(async (n) => { await window.__handle.loadLevel(n) }, name)
+    } catch (e) {
+      loadFails.push(name + ': ' + e.message)
+    }
+  }
+  check('L. 全关卡运行时加载（' + LEVEL_NAMES.length + ' 关）', loadFails.length === 0,
+    loadFails.length ? loadFails.join(' | ') : 'all ok')
+
   // ---- G5. 1-2 瓦片修正验证：砖块 behavior=brick、天花板 metal 可见、chance 已转换
   const t12 = await page.evaluate(() => {
     const h = window.__handle
