@@ -1,0 +1,12 @@
+node_modules
+dist
+_backup
+*.log
+.DS_Store
+
+# Vite 调试残留的临时产物
+vite.config.ts.timestamp-*.mjs
+
+# 本机工具的私有目录
+.freebuff
+.workbuddy-ai

@@ -1,0 +1,10 @@
+# pnpm workspace 根标记。
+#
+# 注意：本项目同时存在 package-lock.json（npm）与 pnpm-lock.yaml（pnpm）两套锁文件，
+# 属于包管理器混用。当前环境只装了 npm，`npm install` + `npm run *` 是已验证可用的路径。
+#
+# 原文件此处是一个未填写的占位符（`esbuild: set this to true or false`），
+# 已改为 pnpm 10 的标准写法。pnpm 10 默认拦截依赖的构建脚本，esbuild 需要放行。
+# 若改用 pnpm，建议直接跑 `pnpm approve-builds` 让 pnpm 自行维护这段配置。
+onlyBuiltDependencies:
+  - esbuild
