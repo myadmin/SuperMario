@@ -9,7 +9,8 @@ export type Tile = {
   behavior?: string
   /**
    * 本项目新增：隐藏块（见 `features/chanceBlock.ts`）在被顶开之前不绘制。
-   * 关卡数据里的 `metal` 瓦片会被特性模块标上它——原版 SMB 的隐藏块就是
+   * 只有 `levelPatches.ts` 的 `hiddenBlocks` 白名单登记的格子会被特性模块标上它
+   * （目前仅 1-1 第 64 列第 8 行的 1-UP 块）——原版 SMB 的隐藏块就是
    * 「看不见但实心，从下方顶开才现身」。
    */
   hidden?: boolean

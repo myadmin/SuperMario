@@ -5,6 +5,7 @@
  * 新增特性时：在 features/ 下加一个模块，在这里补一行 import。
  */
 import './chanceBlock'
+import './tileBehaviors'
 import './flag'
 import './castle'
 import './lift'

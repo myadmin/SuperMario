@@ -234,9 +234,22 @@ try {
     )
 
   let s = await state()
-  check('A2. 初始状态（小马里奥、分数 0、砖块层在位）',
+  check('A2. 初始状态（小马里奥、分数 0、砖块层在位、隐藏块白名单生效）',
     s.score === 0 && s.marioSize.h === 16 && s.brick20.behavior === 'brick' && s.chance16.behavior === 'chance',
     JSON.stringify({ score: s.score, size: s.marioSize }))
+  const hidden64 = await page.evaluate(() => {
+    const h = window.__handle
+    const cur = h.sceneRunner.scenes[h.sceneRunner.sceneIndex]
+    const rs = cur.tileCollider.resolvers
+    for (let i = rs.length - 1; i >= 0; i--) {
+      const t = rs[i].matrix.get(64, 8)
+      if (t) return { style: t.style, hidden: !!t.hidden }
+    }
+    return null
+  })
+  check('A3. 1-1 第 64 列隐藏 1-UP 块仍隐藏（白名单）',
+    hidden64 !== null && hidden64.hidden === true && hidden64.style === 'metal',
+    JSON.stringify(hidden64))
 
   // ---- B1. 顶金币问号块（col 106；col 16/78 是道具块）
   await bump(106 * 16 + 1, 163)
@@ -426,6 +439,26 @@ try {
     { timeout: 20000 },
   )
   check('G4. 进入 1-2（马里奥在关卡中）', true)
+
+  // ---- G5. 1-2 瓦片修正验证：砖块 behavior=brick、天花板 metal 可见、chance 已转换
+  const t12 = await page.evaluate(() => {
+    const h = window.__handle
+    const cur = h.sceneRunner.scenes[h.sceneRunner.sceneIndex]
+    const rs = cur.tileCollider.resolvers
+    const read = (x, y) => {
+      for (let i = rs.length - 1; i >= 0; i--) {
+        const t = rs[i].matrix.get(x, y)
+        if (t) return { style: t.style, behavior: t.behavior ?? null, hidden: !!t.hidden }
+      }
+      return null
+    }
+    return { ceilingBrick: read(10, 2), structureBrick: read(39, 7), ceilingMetal: read(89, 2), chance: read(10, 9) }
+  })
+  check('G5. 1-2 瓦片：砖可顶(behavior=brick)、天花板 metal 可见、chance 已转换',
+    t12.ceilingBrick.behavior === 'brick' && t12.structureBrick.behavior === 'brick' &&
+      t12.ceilingMetal.hidden === false && t12.ceilingMetal.style === 'metal' &&
+      t12.chance.behavior === 'chance',
+    JSON.stringify(t12))
 
   console.log('\n---- console/page/http errors ----')
   console.log(errors.length ? errors.join('\n') : '(none)')

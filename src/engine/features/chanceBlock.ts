@@ -15,12 +15,18 @@
  * **隐藏块**（本项目新增）：原版 SMB 里「看不见但实心、从下方顶开才现身」的方块。
  * 关卡数据里同样没有「隐藏」这个字段——上游把原版的隐藏块按它的底层瓦片存了下来，
  * 就是 `style: "metal"`（`tiles.png` 的实心块，也正是本项目「已使用方块」的外观，
- * 所以现身之后看起来和顶过的问号块完全一样）。1-1 第 64 列第 8 行那枚孤零零的
- * `metal` 就是原版的隐藏 1-UP 块（位置与 NES 版一致，用户早年那版实现的注释里
- * 就直接写着 `Hidden 1-UP Block (at col 64, row 8)`），因此这里的规则是：
- * **关卡数据里每个 `metal` 瓦片都是隐藏块**。顶出来的是什么同样没有记录，只能按
- * 「关卡名 + 格子坐标」补一张表（现在在 `levelPatches.ts` 的 `hiddenBlocks`），
- * 表里没有的一律出金币（原版的隐藏块绝大多数也是金币）。
+ * 所以现身之后看起来和顶过的问号块完全一样）。
+ *
+ * 但「metal = 隐藏块」**只对 1-1 成立**：1-1 全图唯一一枚 `metal` 就是第 64 列第 8 行
+ * 那枚孤零零的方块，与原版隐藏 1-UP 块位置一致（用户早年那版实现的注释里就直接写着
+ * `Hidden 1-UP Block (at col 64, row 8)`）。其余关卡的 `metal`（1-2 的六枚——其中
+ * [89,2] 还嵌在天花板里、3-1 的三枚无碰撞悬浮块、coin-room 的结构块）在原版里都是
+ * **可见的实心块 / 装饰块**，曾因旧的全局规则被错误隐藏（天花板烧出洞、悬浮块消失，
+ * 即用户实测报告的「地图与原版不一致」）。所以现在的规则是**白名单制**：只有
+ * `levelPatches.ts` 的 `hiddenBlocks` 表里显式登记的格子才转成隐藏块（且仅当该格
+ * 确实是 `metal` / `metal-alt` 样式），其余保持 JSON 原样。这张表同时是「顶出来是
+ * 什么」的数据源——「藏不藏」与「出什么」是同一枚块的两面，合并在一张表里是合理的
+ * （见 `levelPatches.ts` 的 `HiddenBlockPatch`）。
  *
  * 由 Agent A 实现；「无限顶」的修复见 `consumeChanceBlock`。
  */
@@ -64,6 +70,13 @@ let usedBlockStyle: string | undefined
 
 /** 本项目新增：本关装道具的问号块（`indexX,indexY`），每次加载关卡重建。 */
 const powerupBlocks = new Set<string>()
+
+/**
+ * 本项目新增：隐藏块登记格允许的样式。上游把隐藏块按底层瓦片存下来，
+ * `metal`（overworld / underworld / castle 三表都有）与 `metal-alt`（仅 castle 表，
+ * 1-4 / 2-4 在用）两种实心块样式都要认；其它样式的格子即使被登记也不转换。
+ */
+const HIDDEN_BLOCK_STYLES = new Set([USED_BLOCK_STYLE, 'metal-alt'])
 
 /** 本项目新增：每帧推进问号块上弹位移的衰减，挂在代理实体上（参考 loaders/level.ts 的 Spawner）。 */
 class TileBumpAnimator extends Trait {
@@ -202,8 +215,10 @@ registerLevelFeature({
     // 三张含 `chance` 的精灵表都定义了 `metal`；这里只做防御，缺贴图就不换外观。
     usedBlockStyle = ctx.sprites.tiles.has(USED_BLOCK_STYLE) ? USED_BLOCK_STYLE : undefined
 
-    // 本关隐藏块的内容表（缺省出金币）与装道具的问号块坐标，都来自关卡补丁表
-    // （`engine/levelPatches.ts`；从前是本文件顶层的两张 `Record<关卡名, …>`）。
+    // 本关隐藏块的「白名单 + 内容」表（同一张表，缺省出金币）与装道具的问号块坐标，
+    // 都来自关卡补丁表（`engine/levelPatches.ts`；从前是本文件顶层的两张
+    // `Record<关卡名, …>`）。白名单这头由下面的网格扫描消费，内容这头由
+    // `handleHiddenY` 消费。
     const patch = patchFor(ctx.name)
     for (const entry of patch.hiddenBlocks ?? []) {
       hiddenContents.set(`${entry.x},${entry.y}`, entry.content)
@@ -215,7 +230,7 @@ registerLevelFeature({
     setBrickContents(patch.bricks ?? [], ctx.sprites)
 
     // 上游把 chance 的 behavior 写成 ground，这里就地改成 chance（只改内存对象，不动 JSON）；
-    // 同时把关卡数据里的 `metal` 瓦片认成隐藏块。
+    // 隐藏块则按白名单转换：levelPatches.hiddenBlocks 登记的格子才换成 hidden。
     for (const grid of ctx.grids) {
       grid.matrix.forEach((tile, indexX, indexY) => {
         if (!tile) {
@@ -227,11 +242,16 @@ registerLevelFeature({
           return
         }
 
-        if (tile.style !== USED_BLOCK_STYLE) {
+        // 白名单制：只有 hiddenBlocks 表显式登记、且该格确实是 metal / metal-alt 样式的
+        // 才是隐藏块。其余 metal / metal-alt 保持 JSON 原样——它们是原版里的可见实心块
+        // 或装饰块（3-1 那几枚 behavior 为空，保持不实心，不要顺手补）。
+        const entry = (patch.hiddenBlocks ?? []).find((b) => b.x === indexX && b.y === indexY)
+        if (!entry || !HIDDEN_BLOCK_STYLES.has(tile.style)) {
           return
         }
 
-        // 隐藏块：换成一个新对象，避免连坐同一段 range 的其它格子（见 `consumeBlock`）。
+        // 隐藏块：换成一个新对象，避免连坐同一段 range 的其它格子（见 `consumeBlock`；
+        // 1-2.json 的六枚 metal 就同属一个 tile 规格，共享同一个对象）。
         // 行为换成 `hidden` 后仍然实心（`handleX` / `handleHiddenY`），只是默认不画。
         grid.matrix.set(indexX, indexY, { ...tile, behavior: 'hidden', hidden: true })
       })
