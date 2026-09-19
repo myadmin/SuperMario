@@ -52,22 +52,35 @@ const LARGE_FRAMES: Record<string, string> = {
 const LARGE_FRAME_NAMES = new Set(Object.values(LARGE_FRAMES))
 
 /**
- * 本项目新增：火力形态的调色板替换。
+ * 本项目新增：调色板替换机制（按「调色板名 + 帧名」缓存，每帧只重画一次）。
  *
  * `mario.png` 里没有独立的火力帧（原版 SMB 也只是同一套帧换调色板），所以这里在
- * 绘制时把大马里奥那几帧读出来重画一套颜色：
- *   帽子 / 上衣 红 `#bd4131` → 白 `#ffffff`，背带褲 橄榄 `#797b00` → 红 `#bd4131`
- * 这正是原版火力马里奥（白衣红褲）的换色规则，颜色值直接取自 `public/img/sprites.png`
- * 的实际像素。结果按帧名缓存，每帧只重画一次。
+ * 绘制时把帧读出来重画一套颜色。颜色值直接取自 `public/img/sprites.png` 的实际像素：
+ *   - `fire`（火力形态）：帽子 / 上衣 红 `#bd4131` → 白 `#ffffff`，背带褲 橄榄
+ *     `#797b00` → 红 `#bd4131`——原版火力马里奥（白衣红褲）的换色规则；
+ *   - `starA` / `starB`（无敌星闪烁）：原版吃星星后整套精灵调色板循环。**注意它们
+ *     必须与火力色不同**——火力马里奥吃星星时若只在「常态 ↔ 火力色」间切换，等于
+ *     没换（用户实测「吃完星星不会闪光」），所以星星闪烁循环是
+ *     [常态 → starA → starB]（火力马里奥为 [火力 → starA → starB]）。
  */
-const FIRE_PALETTE: Record<string, [number, number, number]> = {
-  '189,65,49': [255, 255, 255], // #bd4131 红 → 白
-  '121,123,0': [189, 65, 49], // #797b00 橄榄 → 红
+const SWAP_PALETTES: Record<string, Record<string, [number, number, number]>> = {
+  fire: {
+    '189,65,49': [255, 255, 255], // #bd4131 红 → 白
+    '121,123,0': [189, 65, 49], // #797b00 橄榄 → 红
+  },
+  starA: {
+    '189,65,49': [0, 168, 0], // #bd4131 红 → NES 绿
+    '121,123,0': [189, 65, 49], // #797b00 橄榄 → 红
+  },
+  starB: {
+    '189,65,49': [0, 0, 0], // #bd4131 红 → 黑
+    '121,123,0': [0, 168, 0], // #797b00 橄榄 → 绿
+  },
 }
 
-const fireFrames = new Map<string, HTMLCanvasElement>()
+const swappedFrames = new Map<string, HTMLCanvasElement>()
 
-function toFireFrame(buffer: HTMLCanvasElement) {
+function toSwappedFrame(buffer: HTMLCanvasElement, palette: Record<string, [number, number, number]>) {
   const canvas = document.createElement('canvas')
   canvas.width = buffer.width
   canvas.height = buffer.height
@@ -81,7 +94,7 @@ function toFireFrame(buffer: HTMLCanvasElement) {
     if (data[i + 3] === 0) {
       continue
     }
-    const swap = FIRE_PALETTE[`${data[i]},${data[i + 1]},${data[i + 2]}`]
+    const swap = palette[`${data[i]},${data[i + 1]},${data[i + 2]}`]
     if (swap) {
       data[i] = swap[0]
       data[i + 1] = swap[1]
@@ -93,12 +106,12 @@ function toFireFrame(buffer: HTMLCanvasElement) {
   return canvas
 }
 
-function getFireFrame(sprite: SpriteSheet, name: string, flip: boolean) {
-  const key = `${name}${flip ? ':flip' : ''}`
-  let frame = fireFrames.get(key)
+function getSwappedFrame(sprite: SpriteSheet, name: string, flip: boolean, paletteKey: string) {
+  const key = `${paletteKey}:${name}${flip ? ':flip' : ''}`
+  let frame = swappedFrames.get(key)
   if (!frame) {
-    frame = toFireFrame(sprite.tiles.get(name)![flip ? 1 : 0])
-    fireFrames.set(key, frame)
+    frame = toSwappedFrame(sprite.tiles.get(name)![flip ? 1 : 0], SWAP_PALETTES[paletteKey])
+    swappedFrames.set(key, frame)
   }
   return frame
 }
@@ -202,13 +215,22 @@ function createMarioFactory(sprite: SpriteSheet, audio: AudioBoard) {
     // 而蹲着的碰撞盒只有 16 高 —— 往上偏一个身位，脚才落在地上。
     const offsetY = this.getTrait(Crouch).crouching ? CROUCH_BOX.height - LARGE_BOX.height : 0
 
-    // 本项目新增：无敌星期间的调色板闪烁——原版是循环换色，这里在「正常帧」与
-    // 「火力调色板帧」之间交替（`getFireFrame` 对任意帧都能重上色，大小马里奥通用）。
+    // 本项目新增：绘制时用哪套调色板。无敌星期间按 ~6Hz 在三态间循环（原版就是
+    // 整套调色板轮着换）：普通马里奥 [常态 → starA → starB]，火力马里奥
+    // [火力 → starA → starB]（火力色本身就是他的常态，不能拿来当「闪」的另一态）。
+    // 非星星时保持原行为：火力形态的大帧用火力调色板。
+    const power = this.getTrait(PowerState)
     const star = this.getTrait(StarPower)
-    const starFlash = star.active && Math.floor(this.lifetime * 8) % 2 === 1
+    let paletteKey: string | null = null
+    if (star.active) {
+      const phase = Math.floor(this.lifetime * 6) % 3
+      paletteKey = power.fire ? (['fire', 'starA', 'starB'] as const)[phase] : phase === 0 ? null : (['starA', 'starB'] as const)[phase - 1]
+    } else if (power.fire && LARGE_FRAME_NAMES.has(frame)) {
+      paletteKey = 'fire'
+    }
 
-    if ((starFlash || (this.getTrait(PowerState).fire && LARGE_FRAME_NAMES.has(frame)))) {
-      context.drawImage(getFireFrame(sprite, frame, getHeading(this)), 0, offsetY)
+    if (paletteKey) {
+      context.drawImage(getSwappedFrame(sprite, frame, getHeading(this), paletteKey), 0, offsetY)
     } else {
       sprite.draw(frame, context, 0, offsetY, getHeading(this))
     }
